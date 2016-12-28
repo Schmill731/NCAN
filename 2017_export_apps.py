@@ -19,6 +19,7 @@
 
 # Import necessary libraries
 import csv
+from export_support import *
 
 # Functions
 def readQualtricsCSV(filePath, header, uniqueJunk=[]):
@@ -70,10 +71,6 @@ appHeader = ["AppID", "ResponseSet", "BlankName", "ExternalDataReference",
 # Read in Application Data
 apps = readQualtricsCSV("../Summer_Course_2017_Application.csv", appHeader)
 
-print("DEBUG: regs")
-print(regs)
-print("DEBUG: apps")
-print(apps)
 
 
 
