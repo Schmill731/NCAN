@@ -71,6 +71,17 @@ appHeader = ["AppID", "ResponseSet", "BlankName", "ExternalDataReference",
 # Read in Application Data
 apps = readQualtricsCSV("../Summer_Course_2017_Application.csv", appHeader)
 
+# Remove blank responses from apps
+apps = [x for x in apps if x["Email"] != '']
+        
+#Join applications with registrations
+for app in apps:
+    for reg in regs:
+        if reg["Email"] == app["Email"]:
+            app.update(reg)
+            break
+
+
 
 
 
