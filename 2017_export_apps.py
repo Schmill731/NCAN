@@ -20,22 +20,35 @@
 # Import necessary libraries
 import csv
 
+#global variables
+apps = None
+junkHeaders = ["ResponseSet", "BlankName", "ExternalDataReference", "BlankEmail",
+    "IPAddress", "Status", "StartDate", "EndDate", "Finished", "ResponseID",
+    "Intro", "Ones", "RecInfo", "Lat", "Long", "LocAcc", "Blank"]
+
 # Create headers for registration data
 regHeader = ["RegID", "ResponseSet", "BlankName", "ExternalDataReference", 
     "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
     "ResponseID", "Intro", "FirstName", "LastName", "Email", "Ones", "RecInfo", 
     "Rec1First", "Rec1Last", "Rec1Email", "Rec2First", "Rec2Last", "Rec2Email",
     "Rec3First", "Rec3Last", "Rec3Email", "Rec4First", "Rec4Last", "Rec4Email",
-    "Lat", "Long", "LocAcc"]
+    "Lat", "Long", "LocAcc", "Blank"]
 
-regs = None
+
 
 # Read in Registration Data
 with open('../Summer_Course_2017_Registration.csv', newline='') as regFile:
     registrations = csv.DictReader(regFile, fieldnames=regHeader)
     
     # Remove the Qualtrics headers
-    regs = list(registrations)[2:]
+    apps = list(registrations)[2:]
 
-print(regs)
+    # Remove the unncessary elements
+    for app in apps:
+        for junk in junkHeaders:
+            app.pop(junk)
+
+print("DEBUG:")
+print(apps)
+
 
