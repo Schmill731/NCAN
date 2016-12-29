@@ -3,10 +3,13 @@
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
 #
-# Last Updated: 12/28/16
+# Last Updated: 12/29/16
 #
 # Functions to help export QualtricsCSV files to an easy-to-read format.
 # Designed to be used with 2017_export_apps.py
+
+#imports
+from reportlab.platypus import Paragraph, Frame
 
 #Common junk to all Qualtrics (Legacy) CSV exports
 commonJunk = ["ResponseSet", "BlankName", "ExternalDataReference", "BlankEmail",
@@ -46,3 +49,15 @@ def drawLine(canvas, fontSize, field="", answer=""):
     canvas.textOut(field)
     canvas.setFont("Times-Roman", fontSize)
     canvas.textLine(answer)
+
+def writeSection(canvas, text, style, x, y, width, height, id):
+    """Writes text to the canvas inside a bounding box of size width x height,
+    with the lower left corner located at (x, y). This bounding box then has id
+    of id."""
+
+    section = Frame(x, y, width, height, leftPadding = 0, rightPadding = 0, 
+        topPadding = 0, bottomPadding = 0, id=id)
+
+    section.addFromList([Paragraph(text, style)], canvas)
+
+    return id

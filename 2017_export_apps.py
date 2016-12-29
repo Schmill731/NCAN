@@ -5,7 +5,7 @@
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
 #
-# Last Updated: 12/28/16
+# Last Updated: 12/29/16
 #
 # Used to convert Qualtrics CSV response data to easy-to-review PDFs for each 
 # response. Assumes that the CSV files and other folders are located in the 
@@ -23,6 +23,9 @@ import os
 from export_support import *
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.platypus import Paragraph, Frame
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 
 # Functions
 def readQualtricsCSV(filePath, header, uniqueJunk=[]):
@@ -94,9 +97,12 @@ for app in apps:
     pdf = canvas.Canvas("2017_Applications/" + app["AppID"] + ".pdf",
         pagesize=letter)
 
+    # Get sample styles
+    styles = getSampleStyleSheet()
+    norm = styles["Normal"]
+
     #Set Running Header of Applicant ID
-    pdf.setFont("Times-Roman", 12)
-    pdf.drawString(72, 744, "Applicant ID: " + app["AppID"])
+    writeSection(pdf, "Applicant ID: " + app["AppID"], norm, inch, 744, 200, 12, id="Header")
     pdf.setFont("Times-Bold", 18)
 
     #Write basic applicant info
