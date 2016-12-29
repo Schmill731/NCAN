@@ -19,7 +19,10 @@
 
 # Import necessary libraries
 import csv
+import os
 from export_support import *
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 # Functions
 def readQualtricsCSV(filePath, header, uniqueJunk=[]):
@@ -53,7 +56,7 @@ def readQualtricsCSV(filePath, header, uniqueJunk=[]):
 # Create headers for registration data
 regHeader = ["RegID", "ResponseSet", "BlankName", "ExternalDataReference", 
     "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
-    "ResponseID", "Intro", "FirstName", "LastName", "Email", "Ones", "RecInfo", 
+    "ResponseID", "Intro", "First", "Last", "Email", "Ones", "RecInfo", 
     "Rec1First", "Rec1Last", "Rec1Email", "Rec2First", "Rec2Last", "Rec2Email",
     "Rec3First", "Rec3Last", "Rec3Email", "Rec4First", "Rec4Last", "Rec4Email",
     "Lat", "Long", "LocAcc", "Blank"]
@@ -65,7 +68,7 @@ regs = readQualtricsCSV("../Summer_Course_2017_Registration.csv", regHeader, reg
 #Create headers for application data
 appHeader = ["AppID", "ResponseSet", "BlankName", "ExternalDataReference",
     "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished",
-    "FirstName", "LastName", "Email", "SOI", "TranscriptURL", "cvURL", "Lat",
+    "First", "Last", "Email", "SOI", "TranscriptURL", "cvURL", "Lat",
     "Long", "LocAcc", "Blank"]
 
 # Read in Application Data
@@ -81,6 +84,21 @@ for app in apps:
             app.update(reg)
             break
 
+# Make folder for response if it does not exist
+if not os.path.exists('2017_Applications'):
+    os.makedirs('2017_Applications')
+
+# Begin making Application PDFs
+for app in apps:
+    pdf = canvas.Canvas("2017_Applications/" + app["AppID"] + ".pdf",
+        pagesize=letter)
+    pdf.setFont("Times-Roman", 12)
+    pdf.drawString(72, 744, "Applicant ID: " + app["AppID"])
+    pdf.setFont("Times-Bold", 18)
+    pdf.drawCentredString(306, 702, "Applicant Information")
+    pdf.setFont("Times-Roman", 12)
+    pdf.drawString(72, 648, "Name: " + app["First"] + " " + app["Last"])
+    pdf.save()
 
 
 
