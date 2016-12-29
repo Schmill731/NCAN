@@ -90,14 +90,45 @@ if not os.path.exists('2017_Applications'):
 
 # Begin making Application PDFs
 for app in apps:
+    #Create PDFs
     pdf = canvas.Canvas("2017_Applications/" + app["AppID"] + ".pdf",
         pagesize=letter)
+
+    #Set Running Header of Applicant ID
     pdf.setFont("Times-Roman", 12)
     pdf.drawString(72, 744, "Applicant ID: " + app["AppID"])
     pdf.setFont("Times-Bold", 18)
+
+    #Write basic applicant info
     pdf.drawCentredString(306, 702, "Applicant Information")
-    pdf.setFont("Times-Roman", 12)
-    pdf.drawString(72, 648, "Name: " + app["First"] + " " + app["Last"])
+    basicInfo = pdf.beginText()
+    basicInfo.setTextOrigin(72, 648)
+    drawLine(basicInfo, 14, "Basic Information")
+    drawLine(basicInfo, 3)
+    drawLine(basicInfo, 12, "Name: ", app["First"] + " " + app["Last"])
+    drawLine(basicInfo, 12, "Email: ", app["Email"])
+    drawLine(basicInfo, 18)
+
+    #Demographic Info
+    drawLine(basicInfo, 14, "Demographic Information")
+    drawLine(basicInfo, 3)
+    drawLine(basicInfo, 12, "Are you Hispanic or Latino? ", "STILL IN DEV")
+    drawLine(basicInfo, 12, "Race or Ethnicitiy: ", "STILL IN DEV")
+    drawLine(basicInfo, 12, "Gender: ", "STILL IN DEV")
+    drawLine(basicInfo, 12, "Education: ", "STILL IN DEV")
+    drawLine(basicInfo, 18)
+
+    #Recommender Info
+    drawLine(basicInfo, 14, "Recommender Information")
+    drawLine(basicInfo, 3)
+    for i in range(1, 5):
+        drawLine(basicInfo, 12, "Recommender #" + str(i))
+        drawLine(basicInfo, 12, "Name: ", "STILL IN DEV")
+        drawLine(basicInfo, 12, "Email: ", "STILL IN DEV")
+        drawLine(basicInfo, 3)
+
+
+    pdf.drawText(basicInfo)
     pdf.save()
 
 

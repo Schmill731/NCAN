@@ -36,3 +36,13 @@ def readQualtricsCSV(filePath, header, uniqueJunk=[]):
                 response.pop(junk)
 
         return responses
+
+def drawLine(canvas, fontSize, field="", answer=""):
+    """Draws a line on the PDF of size fontSize (in points), where field is 
+    bolded and answer, which follows on the same line, is not. After answer, 
+    the program skips to the next line."""
+
+    canvas.setFont("Times-Bold", fontSize)
+    canvas.textOut(field)
+    canvas.setFont("Times-Roman", fontSize)
+    canvas.textLine(answer)
