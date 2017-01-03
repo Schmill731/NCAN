@@ -116,11 +116,28 @@ for app in apps:
     elif "Rec4Email" in app.keys():
         recCount = 4
 
+    #Counter to track # of recommendation letters submitted
+    recsSubmitted = 0
+
     #Print recommender info
     for i in range(1, recCount):
         firstPage.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
         firstPage.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
         firstPage.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+
+        # Check whether letter was submitted
+        if "Rec" + str(i) + "ID" in app.keys():
+            recSubmit = "YES"
+            recsSubmitted += 1
+        else:
+            recSubmit = "NO"
+        firstPage.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
+
+    # If application is incomplete, print that
+    if recsSubmitted < 2:
+        firstPage.append(Paragraph("", styles["heading1"]))
+        firstPage.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
+        firstPage.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
 
     writeSection(pdf, firstPage, 72, 72, 468, 648, "Body")
     pdf.save()
