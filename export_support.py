@@ -9,10 +9,12 @@
 # Designed to be used with 2017_export_apps.py
 
 #imports
+import csv
 from reportlab.platypus import Paragraph, Frame
+from reportlab.lib.units import inch
 
 #Common junk to all Qualtrics (Legacy) CSV exports
-commonJunk = ["ResponseSet", "BlankName", "ExternalDataReference", "BlankEmail",
+commonJunk = ["ResponseSet", "BlankName", "ExternalDataReference",
     "IPAddress", "Status", "StartDate", "EndDate", "Finished",
     "Lat", "Long", "LocAcc", "Blank"]
 
@@ -50,7 +52,7 @@ def drawLine(canvas, fontSize, field="", answer=""):
     canvas.setFont("Times-Roman", fontSize)
     canvas.textLine(answer)
 
-def writeSection(canvas, text, style, x, y, width, height, id):
+def writeSection(canvas, paragraphs, x, y, width, height, id):
     """Writes text to the canvas inside a bounding box of size width x height,
     with the lower left corner located at (x, y). This bounding box then has id
     of id."""
@@ -58,6 +60,10 @@ def writeSection(canvas, text, style, x, y, width, height, id):
     section = Frame(x, y, width, height, leftPadding = 0, rightPadding = 0, 
         topPadding = 0, bottomPadding = 0, id=id)
 
-    section.addFromList([Paragraph(text, style)], canvas)
+    for para in paragraphs:
+        while section.add(para, canvas) == 0:
+            section.split(para, canvas)
+            section = Frame(0.5*inch, inch, 7*inch, 10.5*inch, showBoundary=1)
+
 
     return id
