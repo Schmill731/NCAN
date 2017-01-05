@@ -58,7 +58,7 @@ def drawPara(canvas, para, x, y):
     para.drawOn(canvas, x, y)
 
 def drawHeader(canvas, headerText):
-    drawPara(canvas, Paragraph(headerText, styles["normal"]), 72, 744)
+    drawPara(canvas, Paragraph(headerText, styles["normal"]), 72, 742)
 
 def writeSection(canvas, paragraphs, x, y, width, height, id):
     """Writes text to the canvas inside a bounding box of size width x height,

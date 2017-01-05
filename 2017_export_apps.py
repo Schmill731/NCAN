@@ -24,9 +24,10 @@ from export_support import *
 from pdf_templates import *
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Frame
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Frame, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 
 # High-level walkthrough
 def main():
@@ -63,11 +64,17 @@ def main():
                 app.update(dem)
 
     # Make folder for pdfs if it does not exist
-    if not os.path.exists('2017_Applications'):
-        os.makedirs('2017_Applications')
+    if not os.path.exists('../2017_Applications'):
+        os.makedirs('../2017_Applications')
 
     # Make application PDFs
-    makeApplicationPDFs(apps)
+    for app in apps:
+
+        #Add Basic info and SOI
+        makeApplicationPDF(app)
+
+        #Add watermark if application is incomplete
+
 
 #Helper Functions
 
@@ -126,35 +133,13 @@ def importDemographicData():
     return readQualtricsCSV("../Demographic_Supplement.csv", demHeader, demJunk)
 
 
-def makeApplicationPDFs(apps):
-    # Begin making Application PDFs
-    for app in apps:
-        #Create PDF
-        pdf = SimpleDocTemplate("2017_Applications/" + app["AppID"] + ".pdf")
-        
-        #Split SOI along line breaks
-        soi = app["SOI"].split(" / ")
-        soiText = []
-        for para in soi:
-            soiText.append(Paragraph(para, styles["soi"]))
+def makeApplicationPDF(app):
+    #Create PDF
+    pdf = SimpleDocTemplate("../2017_Applications/{}.pdf".format(app["AppID"]), 
+        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
 
-        #Make templates
-        def BasicInfo(canvas, doc): BasicInfoPage(app, canvas, doc)
-        def soiTemplate(canvas, doc): soiPages(app, canvas, doc)
-
-        # Make PDF with pre-defined page templates.
-        pdf.build(soiText, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
-
-def BasicInfoPage(app, canvas, doc):
-    #Save state of PDF
-    canvas.saveState()
-
-    #Set Running Header of Applicant ID
-    drawHeader(canvas, "Applicant ID: " + app["AppID"])
-
-    #Write basic applicant info
-    pageInfo = [
-        Paragraph("Applicant Information", styles["title"]),
+    # Compile Info to Print on PDF
+    info = [
         Paragraph("Basic Information", styles["heading1"]),
         Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), styles["normal"]),
         Paragraph("<b>Email:</b> {}".format(app["Email"]), styles["normal"]),
@@ -162,9 +147,10 @@ def BasicInfoPage(app, canvas, doc):
 
     # Add demographic info
     if "demID" not in app.keys():
-        pageInfo.append(Paragraph("Applicant did not complete optional demographic supplement.", styles["normal"]))
+        info.append(Paragraph("Applicant did not complete optional" + 
+            " demographic supplement.", styles["normal"]))
         for _ in range(0, 2):
-            pageInfo.append(Paragraph("", styles["normal"]))
+            info.append(Paragraph("", styles["normal"]))
     else:
         # Hispanic or Latino Information
         hispanic = ""
@@ -174,7 +160,7 @@ def BasicInfoPage(app, canvas, doc):
                 hispanic = "Yes"
         elif not hispanic:
             hispanic = "No answer"
-        pageInfo.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
+        info.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
 
         #Race/Ethnicity
         race = ""
@@ -202,7 +188,7 @@ def BasicInfoPage(app, canvas, doc):
             race = race + app["Other"]
         if not race:
             race = "No answer"
-        pageInfo.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
+        info.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
 
         # Gender
         gender = ""
@@ -212,7 +198,7 @@ def BasicInfoPage(app, canvas, doc):
             gender = "Female"
         elif gender:
             gender = "No answer"
-        pageInfo.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
+        info.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
 
         #Education
         ed = ""
@@ -232,7 +218,7 @@ def BasicInfoPage(app, canvas, doc):
             ed = ed + app["Other"]
         if not ed:
             ed = "No answer"
-        pageInfo.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
+        info.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
 
     #Determine number of recommenders
     recCount = 2
@@ -245,11 +231,11 @@ def BasicInfoPage(app, canvas, doc):
     recsSubmitted = 0
 
     #Print recommender info
-    pageInfo.append(Paragraph("Recommender Information", styles["heading1"]))
+    info.append(Paragraph("Recommender Information", styles["heading1"]))
     for i in range(1, recCount):
-        pageInfo.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-        pageInfo.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
-        pageInfo.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+        info.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
+        info.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
+        info.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
 
         # Check whether letter was submitted
         if "Rec" + str(i) + "ID" in app.keys():
@@ -257,15 +243,40 @@ def BasicInfoPage(app, canvas, doc):
             recsSubmitted += 1
         else:
             recSubmit = "NO"
-        pageInfo.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
+        info.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
 
     # If application is incomplete, print that
     if recsSubmitted < 2:
-        pageInfo.append(Paragraph("", styles["heading1"]))
-        pageInfo.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
-        pageInfo.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
+        info.append(Paragraph("", styles["heading1"]))
+        info.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
+        info.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
 
-    writeSection(canvas, pageInfo, 72, 72, 468, 648, "Body")
+    #Add a Page Break for the application
+    info.append(PageBreak())
+
+    #Split SOI along line breaks
+    soi = app["SOI"].split(" / ")
+    for para in soi:
+        info.append(Paragraph(para, styles["soi"]))
+
+    #Make templates
+    def BasicInfo(canvas, doc): BasicInfoPage(app, canvas, doc)
+    def soiTemplate(canvas, doc): soiPages(app, canvas, doc)
+
+    # Make PDF with pre-defined page templates.
+    pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
+
+def BasicInfoPage(app, canvas, doc):
+    #Save state of PDF
+    canvas.saveState()
+
+    #Set Running Header of Applicant ID
+    canvas.setFont("Times-Roman", 12)
+    canvas.drawString(72, 744, "Applicant ID: " + app["AppID"])
+
+    #Write basic applicant info
+    canvas.setFont("Times-Bold", 18)
+    canvas.drawCentredString(306, 702, "Applicant Information")
 
     #Restore the PDF
     canvas.restoreState()
@@ -275,10 +286,12 @@ def soiPages(app, canvas, doc):
     canvas.saveState()
 
     #Set Running Header of Applicant ID
-    drawHeader(canvas, "Applicant ID: " + app["AppID"])
+    canvas.setFont("Times-Roman", 12)
+    canvas.drawString(72, 744, "Applicant ID: " + app["AppID"])
 
-    # Set title of page
-    drawPara(canvas, Paragraph("Statement of Interest", styles["title"]), 306, 720)
+    #Set Title
+    canvas.setFont("Times-Bold", 18)
+    canvas.drawCentredString(306, 702, "Statement of Interest: Page {}".format(int(doc.page) - 1))
 
     #Restore the PDF
     canvas.restoreState()
