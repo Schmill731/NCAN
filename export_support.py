@@ -62,8 +62,9 @@ def writeSection(canvas, paragraphs, x, y, width, height, id):
 
     for para in paragraphs:
         while section.add(para, canvas) == 0:
+            canvas.showPage()
             section.split(para, canvas)
-            section = Frame(0.5*inch, inch, 7*inch, 10.5*inch, showBoundary=1)
+            section = Frame(72, 72, 468, 648, showBoundary=1)
 
 
     return id
