@@ -12,6 +12,7 @@
 import csv
 from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.units import inch
+from pdf_templates import *
 
 #Common junk to all Qualtrics (Legacy) CSV exports
 commonJunk = ["ResponseSet", "BlankName", "ExternalDataReference",
@@ -51,6 +52,13 @@ def drawLine(canvas, fontSize, field="", answer=""):
     canvas.textOut(field)
     canvas.setFont("Times-Roman", fontSize)
     canvas.textLine(answer)
+
+def drawPara(canvas, para, x, y):
+    para.wrap(468,648)
+    para.drawOn(canvas, x, y)
+
+def drawHeader(canvas, headerText):
+    drawPara(canvas, Paragraph(headerText, styles["normal"]), 72, 744)
 
 def writeSection(canvas, paragraphs, x, y, width, height, id):
     """Writes text to the canvas inside a bounding box of size width x height,

@@ -24,7 +24,7 @@ from export_support import *
 from pdf_templates import *
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import Paragraph, Frame
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Frame
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
@@ -129,144 +129,161 @@ def importDemographicData():
 def makeApplicationPDFs(apps):
     # Begin making Application PDFs
     for app in apps:
-        #Create PDFs
-        pdf = canvas.Canvas("2017_Applications/" + app["AppID"] + ".pdf",
-            pagesize=letter)
-
-        #Set Running Header of Applicant ID
-        writeSection(pdf, [Paragraph("Applicant ID: " + app["AppID"], styles["normal"])], inch, 742, 200, 14, "PageHeader")
-
-        #Write basic applicant info
-        firstPage = [
-            Paragraph("Applicant Information", styles["title"]),
-            Paragraph("Basic Information", styles["heading1"]),
-            Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), styles["normal"]),
-            Paragraph("<b>Email:</b> {}".format(app["Email"]), styles["normal"]),
-            Paragraph("Demographic Information", styles["heading1"])]
-
-        # Add demographic info
-        if "demID" not in app.keys():
-            firstPage.append(Paragraph("Applicant did not complete optional demographic supplement.", styles["normal"]))
-            for _ in range(0, 2):
-                firstPage.append(Paragraph("", styles["normal"]))
-        else:
-            # Hispanic or Latino Information
-            hispanic = ""
-            if app["Hispanic"] == "2":
-                hispanic = "No"
-            elif app["Hispanic"] == "1":
-                hispanic = "Yes"
-            elif not hispanic:
-                hispanic = "No answer"
-            firstPage.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
-
-            #Race/Ethnicity
-            race = ""
-            def addComma(str):
-                if str:
-                    return str + ", "
-                else:
-                    return str
-            if app["White"]:
-                race = race + "White"
-            if app["Black"]:
-                race = addComma(race)
-                race = race + "Black/African American"
-            if app["Native"]:
-                race = addComma(race)
-                race = race + "American Indian/Alaska Native"
-            if app["Asian"]:
-                race = addComma(race)
-                race = race + "Asian"
-            if app["Pacific"]:
-                race = addComma(race)
-                race = race + "Native Hawaiian/Pacific Islander"
-            if app["RaceOther"]:
-                race = addComma(race)
-                race = race + app["Other"]
-            if not race:
-                race = "No answer"
-            firstPage.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
-
-            # Gender
-            gender = ""
-            if app["Gender"] == "1":
-                gender = "Male"
-            elif app["Gender"] == "2":
-                gender = "Female"
-            elif gender:
-                gender = "No answer"
-            firstPage.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
-
-            #Education
-            ed = ""
-            if app["Bachelors"]:
-                ed = "Bachelor's Degree"
-            if app["Masters"]:
-                ed = addComma(ed)
-                ed = ed + "Master's Degree"
-            if app["Doctoral"]:
-                ed = addComma(ed)
-                ed = ed + "Doctoral Degree"
-            if app["Professional"]:
-                ed = addComma(ed)
-                ed = ed + "Professional Degree"
-            if app["EdOther"]:
-                ed = addComma(ed)
-                ed = ed + app["Other"]
-            if not ed:
-                ed = "No answer"
-            firstPage.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
-
-        #Determine number of recommenders
-        recCount = 2
-        if "Rec3Email" in app.keys():
-            recCount = 3
-        elif "Rec4Email" in app.keys():
-            recCount = 4
-
-        #Counter to track # of recommendation letters submitted
-        recsSubmitted = 0
-
-        #Print recommender info
-        firstPage.append(Paragraph("Recommender Information", styles["heading1"]))
-        for i in range(1, recCount):
-            firstPage.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-            firstPage.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
-            firstPage.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
-
-            # Check whether letter was submitted
-            if "Rec" + str(i) + "ID" in app.keys():
-                recSubmit = "YES"
-                recsSubmitted += 1
-            else:
-                recSubmit = "NO"
-            firstPage.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
-
-        # If application is incomplete, print that
-        if recsSubmitted < 2:
-            firstPage.append(Paragraph("", styles["heading1"]))
-            firstPage.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
-            firstPage.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
-
-        writeSection(pdf, firstPage, 72, 72, 468, 648, "Body")
-
-        pdf.showPage()
-
-        #Set Running Header of Applicant ID
-        writeSection(pdf, [Paragraph("Applicant ID: " + app["AppID"], styles["normal"])], inch, 742, 200, 14, "PageHeader")
-
+        #Create PDF
+        pdf = SimpleDocTemplate("2017_Applications/" + app["AppID"] + ".pdf")
+        
         #Split SOI along line breaks
         soi = app["SOI"].split(" / ")
-
-        #Print SOI
-        soiPage = []
+        soiText = []
         for para in soi:
-            soiPage.append(Paragraph(para, styles["soi"]))
+            soiText.append(Paragraph(para, styles["soi"]))
 
-        writeSection(pdf, soiPage, 72, 72, 468, 648, "SOI")
+        #Make templates
+        def BasicInfo(canvas, doc): BasicInfoPage(app, canvas, doc)
+        def soiTemplate(canvas, doc): soiPages(app, canvas, doc)
 
-        pdf.save()
+        # Make PDF with pre-defined page templates.
+        pdf.build(soiText, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
+
+def BasicInfoPage(app, canvas, doc):
+    #Save state of PDF
+    canvas.saveState()
+
+    #Set Running Header of Applicant ID
+    drawHeader(canvas, "Applicant ID: " + app["AppID"])
+
+    #Write basic applicant info
+    pageInfo = [
+        Paragraph("Applicant Information", styles["title"]),
+        Paragraph("Basic Information", styles["heading1"]),
+        Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), styles["normal"]),
+        Paragraph("<b>Email:</b> {}".format(app["Email"]), styles["normal"]),
+        Paragraph("Demographic Information", styles["heading1"])]
+
+    # Add demographic info
+    if "demID" not in app.keys():
+        pageInfo.append(Paragraph("Applicant did not complete optional demographic supplement.", styles["normal"]))
+        for _ in range(0, 2):
+            pageInfo.append(Paragraph("", styles["normal"]))
+    else:
+        # Hispanic or Latino Information
+        hispanic = ""
+        if app["Hispanic"] == "2":
+            hispanic = "No"
+        elif app["Hispanic"] == "1":
+                hispanic = "Yes"
+        elif not hispanic:
+            hispanic = "No answer"
+        pageInfo.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
+
+        #Race/Ethnicity
+        race = ""
+        def addComma(str):
+            if str:
+               return str + ", "
+            else:
+                return str
+        if app["White"]:
+            race = race + "White"
+        if app["Black"]:
+            race = addComma(race)
+            race = race + "Black/African American"
+        if app["Native"]:
+            race = addComma(race)
+            race = race + "American Indian/Alaska Native"
+        if app["Asian"]:
+            race = addComma(race)
+            race = race + "Asian"
+        if app["Pacific"]:
+            race = addComma(race)
+            race = race + "Native Hawaiian/Pacific Islander"
+        if app["RaceOther"]:
+            race = addComma(race)
+            race = race + app["Other"]
+        if not race:
+            race = "No answer"
+        pageInfo.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
+
+        # Gender
+        gender = ""
+        if app["Gender"] == "1":
+            gender = "Male"
+        elif app["Gender"] == "2":
+            gender = "Female"
+        elif gender:
+            gender = "No answer"
+        pageInfo.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
+
+        #Education
+        ed = ""
+        if app["Bachelors"]:
+            ed = "Bachelor's Degree"
+        if app["Masters"]:
+            ed = addComma(ed)
+            ed = ed + "Master's Degree"
+        if app["Doctoral"]:
+            ed = addComma(ed)
+            ed = ed + "Doctoral Degree"
+        if app["Professional"]:
+            ed = addComma(ed)
+            ed = ed + "Professional Degree"
+        if app["EdOther"]:
+            ed = addComma(ed)
+            ed = ed + app["Other"]
+        if not ed:
+            ed = "No answer"
+        pageInfo.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
+
+    #Determine number of recommenders
+    recCount = 2
+    if "Rec3Email" in app.keys():
+        recCount = 3
+    elif "Rec4Email" in app.keys():
+        recCount = 4
+
+    #Counter to track # of recommendation letters submitted
+    recsSubmitted = 0
+
+    #Print recommender info
+    pageInfo.append(Paragraph("Recommender Information", styles["heading1"]))
+    for i in range(1, recCount):
+        pageInfo.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
+        pageInfo.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
+        pageInfo.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+
+        # Check whether letter was submitted
+        if "Rec" + str(i) + "ID" in app.keys():
+            recSubmit = "YES"
+            recsSubmitted += 1
+        else:
+            recSubmit = "NO"
+        pageInfo.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
+
+    # If application is incomplete, print that
+    if recsSubmitted < 2:
+        pageInfo.append(Paragraph("", styles["heading1"]))
+        pageInfo.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
+        pageInfo.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
+
+    writeSection(canvas, pageInfo, 72, 72, 468, 648, "Body")
+
+    #Restore the PDF
+    canvas.restoreState()
+
+def soiPages(app, canvas, doc):
+    #Save state of PDF
+    canvas.saveState()
+
+    #Set Running Header of Applicant ID
+    drawHeader(canvas, "Applicant ID: " + app["AppID"])
+
+    # Set title of page
+    drawPara(canvas, Paragraph("Statement of Interest", styles["title"]), 306, 720)
+
+    #Restore the PDF
+    canvas.restoreState()
+
+
 
 # Run everything!
 if __name__ == "__main__":
