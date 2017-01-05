@@ -71,9 +71,28 @@ def main():
     for app in apps:
 
         #Add Basic info and SOI
-        makeApplicationPDF(app)
+        completed = makeApplicationPDF(app)
 
-        #Add watermark if application is incomplete
+        # Open PDF for editing
+        inpdf = PdfFileReader(open("../2017_Applications/{}.pdf".format(app["AppID"]), "rb"))
+        outpdf = PdfFileWriter()
+
+        #If incomplete, add a watermark
+        watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
+        if not completed:
+            pageCount = inpdf.getNumPages()
+            for num in range(0, pageCount):
+                page = inpdf.getPage(num)
+                page.mergePage(watermark)
+                outpdf.addPage(page)
+
+        # Write new PDF
+        outputStream = open("../2017_Applications/{}.pdf".format(app["AppID"]), "wb")
+        outpdf.write(outputStream)
+
+
+
+
 
 
 #Helper Functions
@@ -246,10 +265,12 @@ def makeApplicationPDF(app):
         info.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
 
     # If application is incomplete, print that
+    completed = True
     if recsSubmitted < 2:
         info.append(Paragraph("", styles["heading1"]))
         info.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
         info.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
+        completed = False
 
     #Add a Page Break for the application
     info.append(PageBreak())
@@ -265,6 +286,9 @@ def makeApplicationPDF(app):
 
     # Make PDF with pre-defined page templates.
     pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
+
+    #Return whether the application is complete or not.
+    return completed
 
 def BasicInfoPage(app, canvas, doc):
     #Save state of PDF
