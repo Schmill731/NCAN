@@ -28,7 +28,7 @@ from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 
 # High-level Walkthrough of script
 def main():
-    print("--------Exporting 2017 Applications--------")
+    print("/n--------Exporting 2017 Applications--------")
 
     # Import Qualtrics Data for use here- this is only the data, no file uploads
     print("Importing Data...")
@@ -76,11 +76,18 @@ def main():
             if os.path.isfile(file_path):
                 os.remove(file_path)
 
+    # Make section template PDFs
+    MakeSectionPdf("Cover Page")
+    MakeSectionPdf("Statement of Interest")
+    MakeSectionPdf("CV or Resume")
+    MakeSectionPdf("(Unofficial) Transcript")
+    MakeSectionPdf("Recommendation Letter")
+
     # Make application PDFs
     print("Making PDFs...")
     app_count = 1
     for app in apps:
-        print("-------- Starting Application {} of {}--------".format(app_count, len(apps)))
+        print("\n-------- Starting Application {} of {}--------".format(app_count, len(apps)))
         print("Applicant: {}".format(app["AppID"]))
 
         #Create file to build PDF
@@ -147,7 +154,7 @@ def main():
 
         app_count += 1
 
-    print("--------Post-Processing PDFs--------")
+    print("\n--------Post-Processing PDFs--------")
 
     # Delete temporary files
     print("Deleting Temporary Files")
@@ -155,6 +162,11 @@ def main():
     for ext in filesToDelete:
         for file in glob("*_{}.pdf".format(ext)):
             os.remove(file)
+
+
+    print("\n--------Success! All Done.--------")
+    # Get all SOIs to compile big PDF
+
 
 
 #Helper Functions

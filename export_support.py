@@ -82,6 +82,15 @@ def MakeHeaderPdf(app):
 
     headerPdf.build([Paragraph("", styles["title"])], onFirstPage=headerTemplate)
 
+def MakeSectionPdf(part):
+    """Makes a pdf with just the section of the application, so it can be
+    added to each page later."""
+    headerPdf = SimpleDocTemplate("{}.pdf".format(part), 
+        pagesize=letter)
+    def headerTemplate(canvas, doc): Section(part, canvas, doc)
+
+    headerPdf.build([Paragraph("", styles["title"])], onFirstPage=headerTemplate)
+
 watermark = GetPdf("watermark.pdf").getPage(0)
 def AddWatermark(pages):
     """Adds a watermark to each page of pages. Pages is expected to a list of 
@@ -100,3 +109,12 @@ def AddHeader(pages, app):
     for page in pages:
         page.mergePage(header)
     return pages
+
+def AddSection(pages, app, section):
+    """Adds the section to the header of each page. Pages is expected to be a
+    list of page objects from PdfFileReader. Section is taken from sample file
+    located in same directory as the script."""
+    section = GetPdf("{}.pdf".format(section)).getPage(0)
+    for page in pages:
+        page.mergePage(section)
+        return pages

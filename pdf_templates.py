@@ -104,6 +104,12 @@ def Header(app, canvas, doc):
     #Set Running Header of Applicant ID
     canvas.setFont("Times-Roman", 12)
     canvas.drawString(6, 778, "Applicant ID: " + app["AppID"])
+
+@PageTemplate
+def Section(part, canvas, doc):
+    #Set Running Header of Applicant Part
+    canvas.setFont("Times-Roman", 12)
+    canvas.drawRightString(606, 778, part)
  
 ########################################################################
 class SoiCanvasMaker(canvas.Canvas):
