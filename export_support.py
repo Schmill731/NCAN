@@ -45,39 +45,6 @@ def readQualtricsCSV(filePath, header, uniqueJunk=[]):
 
         return responses
 
-def drawLine(canvas, fontSize, field="", answer=""):
-    """Draws a line on the PDF of size fontSize (in points), where field is 
-    bolded and answer, which follows on the same line, is not. After answer, 
-    the program skips to the next line."""
-
-    canvas.setFont("Times-Bold", fontSize)
-    canvas.textOut(field)
-    canvas.setFont("Times-Roman", fontSize)
-    canvas.textLine(answer)
-
-def drawPara(canvas, para, x, y):
-    para.wrap(468,648)
-    para.drawOn(canvas, x, y)
-
-def drawHeader(canvas, headerText):
-    drawPara(canvas, Paragraph(headerText, styles["normal"]), 72, 742)
-
-def writeSection(canvas, paragraphs, x, y, width, height, id):
-    """Writes text to the canvas inside a bounding box of size width x height,
-    with the lower left corner located at (x, y). This bounding box then has id
-    of id."""
-
-    section = Frame(x, y, width, height, leftPadding = 0, rightPadding = 0, 
-        topPadding = 0, bottomPadding = 0, id=id)
-
-    for para in paragraphs:
-        while section.add(para, canvas) == 0:
-            canvas.showPage()
-            section.split(para, canvas)
-            section = Frame(72, 72, 468, 648, showBoundary=1)
-
-
-    return id
 
 watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
 def addWatermark(pages):
