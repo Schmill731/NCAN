@@ -80,16 +80,12 @@ styles["soi"] = ParagraphStyle(
     parent=styles["normal"],
     firstLineIndent=36)
 
-def AppHeader(funct):
+def PageTemplate(funct):
     def wrapper(app, canvas, doc):
         #Save state of PDF
         canvas.saveState()
 
-        #Set Running Header of Applicant ID
-        canvas.setFont("Times-Roman", 12)
-        canvas.drawString(6, 778, "Applicant ID: " + app["AppID"])
-
-        #Add other templates
+        #Add templates
         funct(app, canvas, doc)
 
         #Restore the PDF
@@ -97,19 +93,20 @@ def AppHeader(funct):
 
     return wrapper
 
-@AppHeader
-def BasicInfoPage(app, canvas, doc):
+@PageTemplate
+def CoverPage(app, canvas, doc):
     #Write basic applicant info
     canvas.setFont("Times-Bold", 18)
     canvas.drawCentredString(306, 702, "Applicant Information")
 
-@AppHeader
-def BlankHeader(app, canvas, doc):
-    #Just add the header, nothing else
-    pass
+@PageTemplate
+def Header(app, canvas, doc):
+    #Set Running Header of Applicant ID
+    canvas.setFont("Times-Roman", 12)
+    canvas.drawString(6, 778, "Applicant ID: " + app["AppID"])
  
 ########################################################################
-class PageNumCanvas(canvas.Canvas):
+class SoiCanvasMaker(canvas.Canvas):
     """
     http://code.activestate.com/recipes/546511-page-x-of-y-with-reportlab/
     http://code.activestate.com/recipes/576832/
@@ -135,24 +132,21 @@ class PageNumCanvas(canvas.Canvas):
         Add the page number to each page (page x of y)
         """
         page_count = len(self.pages)
-
-        self.__dict__.update(self.pages[0])
-        canvas.Canvas.showPage(self)
  
-        for page in self.pages[1:]:
+        for page in self.pages:
             self.__dict__.update(page)
-            self.draw_page_number(page_count)
+            self.write_title(page_count)
             canvas.Canvas.showPage(self)
  
         canvas.Canvas.save(self)
  
     #----------------------------------------------------------------------
-    def draw_page_number(self, page_count):
+    def write_title(self, page_count):
         """
         Add the page number
         """
         self.setFont("Times-Bold", 18)
-        self.drawCentredString(306, 702, "Statement of Interest: Page {} of {}".format(int(self._pageNumber) - 1, page_count - 1))
+        self.drawCentredString(306, 702, "Statement of Interest: Page {} of {}".format(self._pageNumber, page_count))
 
 
 

@@ -11,7 +11,8 @@
 #imports
 import csv
 import os
-from reportlab.platypus import Paragraph, Frame
+from glob import glob
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Frame
 from reportlab.lib.units import inch
 from pdf_templates import *
 from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
@@ -45,9 +46,44 @@ def readQualtricsCSV(filePath, header, uniqueJunk=[]):
 
         return responses
 
+def addComma(str):
+    """Adds a comma (and space) to the end of a string if there is something
+    already saved in the string (particularly useful for lists)."""
+    if str:
+       return str + ", "
+    else:
+        return str
 
-watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
-def addWatermark(pages):
+def GetPathway(path):
+    """Looks for a pathway matching `path` and returns the filepath to that
+    file, if it exists, else None."""
+    filePath = glob(path)
+    if filePath:
+        return filePath[0]
+    else:
+        return None
+
+def GetPdf(path):
+    """Gets a a PDF at the specified path and returns the object (or None if it
+    doesn't exist)"""
+    pdfPath = GetPathway(path)
+    if pdfPath:
+        pdf = PdfFileReader(open(pdfPath, "rb"), strict = False)
+        return  pdf
+    else:
+        return None
+
+def MakeHeaderPdf(app):
+    """Makes a pdf with just the running header of the application, so it can be
+    added to each page later. Saved as appID_Header.pdf."""
+    headerPdf = SimpleDocTemplate("{}_Header.pdf".format(app["AppID"]), 
+        pagesize=letter)
+    def headerTemplate(canvas, doc): Header(app, canvas, doc)
+
+    headerPdf.build([Paragraph("", styles["title"])], onFirstPage=headerTemplate)
+
+watermark = GetPdf("watermark.pdf").getPage(0)
+def AddWatermark(pages):
     """Adds a watermark to each page of pages. Pages is expected to a list of 
     page object from PdfFileReader. Watermark is taken from sample file located 
     in same directory as the script."""
@@ -55,11 +91,12 @@ def addWatermark(pages):
         page.mergePage(watermark)
     return pages
 
-def addHeader(pages, appID):
+def AddHeader(pages, app):
     """Adds a header to each page of pages. Pages is expected to a list of 
     page object from PdfFileReader. Header is taken from sample file located in 
     same directory as the script."""
-    header = PdfFileReader(open("{}_Header.pdf".format(appID), "rb")).getPage(0)
+    MakeHeaderPdf(app)
+    header = GetPdf("{}_Header.pdf".format(app["AppID"])).getPage(0)
     for page in pages:
         page.mergePage(header)
     return pages

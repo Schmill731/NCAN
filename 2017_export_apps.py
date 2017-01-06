@@ -9,7 +9,7 @@
 #
 # Used to convert Qualtrics CSV response data to easy-to-review PDFs for each 
 # response. Assumes that the CSV files and other folders are located in the 
-# ../directory and are named as follows:
+# same directory and are named as follows (default of Qualtrics exports):
 # Demographic Supplement Responses: Demographic_Supplement.csv
 # Summer Course Recommendation Responses: Summer_Course_Recommendations.csv
 # Summer Course Recommendation Files: Q1 (Folder)
@@ -19,7 +19,7 @@
 
 # Import necessary libraries
 import os
-import glob
+from glob import glob
 from export_support import *
 from pdf_templates import *
 from reportlab.lib.pagesizes import letter
@@ -28,19 +28,25 @@ from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 
 # High-level Walkthrough of script
 def main():
+    print("--------Exporting 2017 Applications--------")
 
     # Import Qualtrics Data for use here- this is only the data, no file uploads
+    print("Importing Data...")
     regs = ImportRegistrationData()
     apps = ImportApplicationData()
     recs = ImportRecommendationData()
     dems = ImportDemographicData()
 
     # Join registration data with application data
+    print("Combining data...")
     for app in apps:
         for reg in regs:
             if reg["Email"] == app["Email"]:
                 app.update(reg)
                 break
+
+    # Save number of recommenders
+    recCount = 0
 
     # Join recommendation data with application data
     for rec in recs:
@@ -48,6 +54,8 @@ def main():
             for num in range(1, 5):
                 if app["Rec{}Email".format(num)] == rec["Email"]:
                     app["Rec{}ID".format(num)] = rec["recID"]
+                    recCount += 1
+            app["RecCount"] = recCount
 
     # Join demographic info with applications
     for dem in dems:
@@ -56,68 +64,105 @@ def main():
                 app.update(dem)
 
     # Create and/or clean up workspace for files
-    appFolder = "../2017_Applications"
+    print("Creating folder for applications...")
+    appFolder = "2017_Applications"
     if not os.path.exists(appFolder):
         # Create workspace (e.g. folder to hold applications)
         os.makedirs(appFolder)
     else:
         # Clean up workspace (e.g. delete all files in folder)
         for file in os.listdir(appFolder):
-            file_path = os.path.join(folder, file)
+            file_path = os.path.join(appFolder, file)
             if os.path.isfile(file_path):
                 os.remove(file_path)
 
     # Make application PDFs
+    print("Making PDFs...")
+    app_count = 1
     for app in apps:
+        print("-------- Starting Application {} of {}--------".format(app_count, len(apps)))
+        print("Applicant: {}".format(app["AppID"]))
+
+        #Create file to build PDF
+        appPdf = PdfFileWriter()
+        docs = []
 
         # Make SOI first (basic info last, to check if all parts submitted)
-        makeSoiPdf(app)
+        print("Making Statement of Interest...")
+        MakeSoiPdf(app)
+        soi = GetPdf("{}_SOI.pdf".format(app["AppID"]))
+        docs.append(soi)
 
-        #Add Basic info and SOI
-        completed = makeApplicationPDF(app)
+        # Get CV
+        print("Getting CV...")
+        cvExists = False
+        cv = GetPdf("Summer_Course_2017_Application/Q12/{}*.pdf".format(app["AppID"]))
+        if cv:
+            docs.append(cv)
+            cvExists = True
 
-        # Open PDF for editing
-        inpdf = PdfFileReader(open("../2017_Applications/{}.pdf".format(app["AppID"]), "rb"))
-        outpdf = PdfFileWriter()
+        # Get transcript
+        print("Getting Transcript...")
+        transcriptExists = False
+        transcript = GetPdf("Summer_Course_2017_Application/Q11/{}*.pdf".format(app["AppID"]))
+        if transcript:
+            docs.append(transcript)
+            transcriptExists = True
 
-        #If incomplete, add a watermark
-        if not completed:
-            pageCount = inpdf.getNumPages()
-            pages = []
-            for num in range(0, pageCount):
-                pages.append(inpdf.getPage(num))
-            pages = addWatermark(pages)
+        # Get recommendation letters and add it to WIP PDF
+        print("Getting Letters of Recommendation...")
+        letterExists = [None]
+        for i in range(1, app["RecCount"] + 1):
+            letterExists.insert(num, False)
+            if "Rec{}ID".format(num) in app.keys():
+                letter = GetPdf("Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
+                if letter:
+                    docs.append(letter)
+                    letterExists[num] = True
+
+        # Dictionary of Existence
+        fileExists = {"CV": cvExists, "Transcript": transcriptExists,
+            "Letters": letterExists}
+
+        # Make Cover Page
+        print("Making Cover Page...")
+        completed = MakeCoverPage(app, fileExists)
+
+        # Get Cover Page
+        cover = GetPdf("{}_cover.pdf".format(app["AppID"]))
+        docs.insert(0, cover)
+
+        # Add pages to PDF (with header and watermark, if appropriate)
+        print("Building Application PDF...")
+        for doc in docs:
+            pages = AddHeader(doc.pages, app)
+            if not completed:
+                pages = AddWatermark(pages)
             for page in pages:
-                outpdf.addPage(page)
+                appPdf.addPage(page)
 
-        # Open CV and Transcript
-        cvPath = glob.glob("../Summer_Course_2017_Application/Q12/{}*.pdf".format(app["AppID"]))
-        if cvPath:
-            cvpdf = PdfFileReader(open(cvPath[0], "rb"))
-            cvCount = cvpdf.getNumPages()
-            cvPages = []
-            for num in range(0, cvCount):
-                cvPages.append(cvpdf.getPage(num))
-            cvPages = addWatermark(cvPages)
-            cvPages = addHeader(cvPages, app["AppID"])
-            for page in cvPages:
-                outpdf.addPage(page)
+        # Write final PDF
+        appStream = open("2017_Applications/{}.pdf".format(app["AppID"]), "wb")
+        appPdf.write(appStream)
 
-        # Write new PDF
-        outputStream = open("../2017_Applications/{}.pdf".format(app["AppID"]), "wb")
-        outpdf.write(outputStream)
+        app_count += 1
 
-        #delete header file
-        os.remove("{}_Header.pdf".format(app["AppID"]))
+    print("--------Post-Processing PDFs--------")
 
-
-
-
+    # Delete temporary files
+    print("Deleting Temporary Files")
+    filesToDelete = ["SOI", "cover", "WIP", "Header"]
+    for ext in filesToDelete:
+        for file in glob("*_{}.pdf".format(ext)):
+            os.remove(file)
 
 
 #Helper Functions
 
 def ImportRegistrationData():
+    """Imports registration data from csv file. Assumes file is located in same 
+    directory as the script."""
+
     # Create headers for registration data
     regHeader = ["RegID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -128,10 +173,14 @@ def ImportRegistrationData():
     regJunk = ["ResponseID", "BlankEmail", "Intro", "Ones", "RecInfo"]
 
     # Read in Registration Data
-    return readQualtricsCSV("../Summer_Course_2017_Registration.csv", regHeader, 
+    return readQualtricsCSV("Summer_Course_2017_Registration.csv", regHeader, 
         regJunk)
 
 def ImportApplicationData():
+    """Imports application data from csv file (leaving out blank applications).
+    Assumes file is located in same directory as the script. NOTE: This only
+    imports the data, and not any files."""
+
     #Create headers for application data
     appHeader = ["AppID", "ResponseSet", "BlankName", "ExternalDataReference",
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished",
@@ -140,12 +189,16 @@ def ImportApplicationData():
     appJunk = ["BlankEmail"]
 
     # Read in Application Data
-    apps = readQualtricsCSV("../Summer_Course_2017_Application.csv", appHeader, appJunk)
+    apps = readQualtricsCSV("Summer_Course_2017_Application.csv", appHeader, appJunk)
 
     # Remove blank responses from apps
     return [x for x in apps if x["Email"] != '']
 
 def ImportRecommendationData():
+    """Imports recommendation data from csv file. Assumes file is located in 
+    same directory as the script. NOTE: This only imports the data, and not any
+    files."""
+
     # Create headers for recommendation data
     recHeader = ["recID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "Email", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -154,10 +207,13 @@ def ImportRecommendationData():
     recJunk = ["Intro", "recURL"]
 
     # Read in Recommendation Data
-    return readQualtricsCSV("../Summer_Course_Recommendations.csv", recHeader, 
+    return readQualtricsCSV("Summer_Course_Recommendations.csv", recHeader, 
         recJunk)
 
 def ImportDemographicData():
+    """Imports demographic data from csv file. Assumes file is located in same 
+    directory as the script."""
+
     # Create headers for demographic data
     demHeader = ["demID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -169,16 +225,21 @@ def ImportDemographicData():
         "JunkEdOther"]
 
     # Read in demographic data
-    return readQualtricsCSV("../Demographic_Supplement.csv", demHeader, demJunk)
+    return readQualtricsCSV("Demographic_Supplement.csv", demHeader, demJunk)
 
 
-def makeApplicationPDF(app):
+def MakeCoverPage(app, fileExists):
+    """Makes the cover page of the application, which includes basic information
+    about the applicant (including demographic info), their recommender's
+    information, and the status of their application (complete v. incomplete).
+    Cover page is saved as appID_cover.pdf."""
     #Create PDF
-    pdf = SimpleDocTemplate("../2017_Applications/{}.pdf".format(app["AppID"]), 
+
+    cover = SimpleDocTemplate("{}_cover.pdf".format(app["AppID"]), 
         pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
 
-    # Compile Info to Print on PDF
-    info = [
+    # Compile text to print on PDF
+    text = [
         Paragraph("Basic Information", styles["heading1"]),
         Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), styles["normal"]),
         Paragraph("<b>Email:</b> {}".format(app["Email"]), styles["normal"]),
@@ -186,10 +247,10 @@ def makeApplicationPDF(app):
 
     # Add demographic info
     if "demID" not in app.keys():
-        info.append(Paragraph("Applicant did not complete optional" + 
+        text.append(Paragraph("Applicant did not complete optional" + 
             " demographic supplement.", styles["normal"]))
         for _ in range(0, 2):
-            info.append(Paragraph("", styles["normal"]))
+            text.append(Paragraph("", styles["normal"]))
     else:
         # Hispanic or Latino Information
         hispanic = ""
@@ -199,15 +260,10 @@ def makeApplicationPDF(app):
                 hispanic = "Yes"
         elif not hispanic:
             hispanic = "No answer"
-        info.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
+        text.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
 
         #Race/Ethnicity
         race = ""
-        def addComma(str):
-            if str:
-               return str + ", "
-            else:
-                return str
         if app["White"]:
             race = race + "White"
         if app["Black"]:
@@ -227,7 +283,7 @@ def makeApplicationPDF(app):
             race = race + app["Other"]
         if not race:
             race = "No answer"
-        info.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
+        text.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
 
         # Gender
         gender = ""
@@ -237,7 +293,7 @@ def makeApplicationPDF(app):
             gender = "Female"
         elif gender:
             gender = "No answer"
-        info.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
+        text.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
 
         #Education
         ed = ""
@@ -257,73 +313,61 @@ def makeApplicationPDF(app):
             ed = ed + app["Other"]
         if not ed:
             ed = "No answer"
-        info.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
+        text.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
 
-    #Determine number of recommenders
-    recCount = 2
-    if "Rec3Email" in app.keys():
-        recCount = 3
-    elif "Rec4Email" in app.keys():
-        recCount = 4
-
-    #Counter to track # of recommendation letters submitted
+    # Counter to track number of recommendations submitted
     recsSubmitted = 0
 
     #Print recommender info
-    info.append(Paragraph("Recommender Information", styles["heading1"]))
-    for i in range(1, recCount):
-        info.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-        info.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
-        info.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+    text.append(Paragraph("Recommender Information", styles["heading1"]))
+    for i in range(1, app["RecCount"] + 1):
+        text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
+        text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
+        text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+
 
         # Check whether letter was submitted
-        if "Rec" + str(i) + "ID" in app.keys():
+        if fileExists["Letters"][i]:
             recSubmit = "YES"
             recsSubmitted += 1
         else:
-            recSubmit = "NO"
-        info.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit), styles["normal"]))
+            recSubmit = "NO (Check Recommendation Letters folder in case of error)"
+        text.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit),
+            styles["normal"]))
 
     # If application is incomplete, print that
     completed = True
-    if recsSubmitted < 2:
-        info.append(Paragraph("", styles["heading1"]))
-        info.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
-        info.append(Paragraph("Reason: Less than 2 recommendation letters", styles["title"]))
+    if recsSubmitted < 2 or not fileExists["CV"] or not fileExists["Transcript"]:
+        text.append(Paragraph("", styles["heading1"]))
+        text.append(Paragraph("APPLICATION INCOMPLETE", styles["title"]))
         completed = False
 
-    #Add a Page Break for the application
-    info.append(PageBreak())
-
-    #Split SOI along line breaks
-    soi = app["SOI"].split(" / ")
-    for para in soi:
-        info.append(Paragraph(para, styles["soi"]))
+        #State reasons why application is incomplete
+        if recsSubmitted < 2:
+            text.append(Paragraph("Reason: Less than 2 recommendation letters",
+                styles["title"]))
+        if not fileExists["CV"]:
+            text.append(Paragraph("Reason: No CV (check CV folder in case of error)",
+                styles["title"]))
+        if not fileExists["Transcript"]:
+            text.append(Paragraph("Reason: No Transcript (check Transcript folder in case of error)",
+                styles["title"]))
 
     #Make templates
-    def BasicInfo(canvas, doc): BasicInfoPage(app, canvas, doc)
-    def soiTemplate(canvas, doc): BlankHeader(app, canvas, doc)
+    def CoverTemplate(canvas, doc): CoverPage(app, canvas, doc)
 
     # Make PDF with pre-defined page templates.
-    pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate, canvasmaker=PageNumCanvas)
+    cover.build(text, onFirstPage=CoverTemplate)
 
-    #Make pdf with header to add to each page of application
-    header = SimpleDocTemplate("{}_Header.pdf".format(app["AppID"]), 
-        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
-    def headerTemplate(canvas, doc): BlankHeader(app, canvas, doc)
-
-    header.build([Paragraph("", styles["title"])], onFirstPage=headerTemplate)
-
-    #Return whether the application is complete or not.
     return completed
 
 def MakeSoiPdf(app):
     """Creates the applicant's statement of interest (SOI), as a pdf, with a 
     headercontaining the applicant's ID, and a title that states how long the 
-    SOI is. Saves it in the application folder, named appID_SOI.pdf"""
+    SOI is. Saves it in the application folder, named appID_SOI"""
 
     # Create PDF
-    pdf = SimpleDocTemplate("../2017_Applications/{}_SOI.pdf".format(app["AppID"]), 
+    pdf = SimpleDocTemplate("{}_SOI.pdf".format(app["AppID"]), 
         pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, 
         bottomMargin=72)
 
