@@ -30,10 +30,10 @@ from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 def main():
 
     # Import Qualtrics Data for use here- this is only the data, no file uploads
-    regs = importRegistrationData()
-    apps = importApplicationData()
-    recs = importRecommendationData()
-    dems = importDemographicData()
+    regs = ImportRegistrationData()
+    apps = ImportApplicationData()
+    recs = ImportRecommendationData()
+    dems = ImportDemographicData()
 
     # Join registration data with application data
     for app in apps:
@@ -58,11 +58,9 @@ def main():
     # Create and/or clean up workspace for files
     appFolder = "../2017_Applications"
     if not os.path.exists(appFolder):
-
         # Create workspace (e.g. folder to hold applications)
         os.makedirs(appFolder)
     else:
-
         # Clean up workspace (e.g. delete all files in folder)
         for file in os.listdir(appFolder):
             file_path = os.path.join(folder, file)
@@ -71,6 +69,9 @@ def main():
 
     # Make application PDFs
     for app in apps:
+
+        # Make SOI first (basic info last, to check if all parts submitted)
+        makeSoiPdf(app)
 
         #Add Basic info and SOI
         completed = makeApplicationPDF(app)
@@ -116,7 +117,7 @@ def main():
 
 #Helper Functions
 
-def importRegistrationData():
+def ImportRegistrationData():
     # Create headers for registration data
     regHeader = ["RegID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -130,7 +131,7 @@ def importRegistrationData():
     return readQualtricsCSV("../Summer_Course_2017_Registration.csv", regHeader, 
         regJunk)
 
-def importApplicationData():
+def ImportApplicationData():
     #Create headers for application data
     appHeader = ["AppID", "ResponseSet", "BlankName", "ExternalDataReference",
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished",
@@ -144,7 +145,7 @@ def importApplicationData():
     # Remove blank responses from apps
     return [x for x in apps if x["Email"] != '']
 
-def importRecommendationData():
+def ImportRecommendationData():
     # Create headers for recommendation data
     recHeader = ["recID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "Email", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -156,7 +157,7 @@ def importRecommendationData():
     return readQualtricsCSV("../Summer_Course_Recommendations.csv", recHeader, 
         recJunk)
 
-def importDemographicData():
+def ImportDemographicData():
     # Create headers for demographic data
     demHeader = ["demID", "ResponseSet", "BlankName", "ExternalDataReference", 
         "BlankEmail", "IPAddress", "Status", "StartDate", "EndDate", "Finished", 
@@ -316,6 +317,26 @@ def makeApplicationPDF(app):
     #Return whether the application is complete or not.
     return completed
 
+def MakeSoiPdf(app):
+    """Creates the applicant's statement of interest (SOI), as a pdf, with a 
+    headercontaining the applicant's ID, and a title that states how long the 
+    SOI is. Saves it in the application folder, named appID_SOI.pdf"""
+
+    # Create PDF
+    pdf = SimpleDocTemplate("../2017_Applications/{}_SOI.pdf".format(app["AppID"]), 
+        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, 
+        bottomMargin=72)
+
+    # Holder for text to go in PDF
+    text = []
+
+    # Split SOI along line breaks and add to text
+    soi = app["SOI"].split(" / ")
+    for para in soi:
+        text.append(Paragraph(para, styles["soi"]))
+
+    # Save PDF, using the SoiCanvasMaker class
+    pdf.build(text, canvasmaker=SoiCanvasMaker)
 
 
 # Run everything!
