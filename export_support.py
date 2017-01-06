@@ -48,12 +48,18 @@ def readQualtricsCSV(filePath, header, uniqueJunk=[]):
 
 watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
 def addWatermark(pages):
+    """Adds a watermark to each page of pages. Pages is expected to a list of 
+    page object from PdfFileReader. Watermark is taken from sample file located 
+    in same directory as the script."""
     for page in pages:
         page.mergePage(watermark)
     return pages
 
 def addHeader(pages, appID):
-    header = PdfFileReader(open("../2017_Applications/{}_Header.pdf".format(appID), "rb")).getPage(0)
+    """Adds a header to each page of pages. Pages is expected to a list of 
+    page object from PdfFileReader. Header is taken from sample file located in 
+    same directory as the script."""
+    header = PdfFileReader(open("{}_Header.pdf".format(appID), "rb")).getPage(0)
     for page in pages:
         page.mergePage(header)
     return pages

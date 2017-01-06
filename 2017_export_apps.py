@@ -106,7 +106,7 @@ def main():
         outpdf.write(outputStream)
 
         #delete header file
-        os.remove("../2017_Applications/{}_Header.pdf".format(app["AppID"]))
+        os.remove("{}_Header.pdf".format(app["AppID"]))
 
 
 
@@ -300,13 +300,13 @@ def makeApplicationPDF(app):
 
     #Make templates
     def BasicInfo(canvas, doc): BasicInfoPage(app, canvas, doc)
-    def soiTemplate(canvas, doc): soiPages(app, canvas, doc)
+    def soiTemplate(canvas, doc): BlankHeader(app, canvas, doc)
 
     # Make PDF with pre-defined page templates.
-    pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
+    pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate, canvasmaker=PageNumCanvas)
 
     #Make pdf with header to add to each page of application
-    header = SimpleDocTemplate("../2017_Applications/{}_Header.pdf".format(app["AppID"]), 
+    header = SimpleDocTemplate("{}_Header.pdf".format(app["AppID"]), 
         pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
     def headerTemplate(canvas, doc): BlankHeader(app, canvas, doc)
 
