@@ -118,3 +118,12 @@ def AddSection(pages, section):
     for page in pages:
         page.mergePage(section)
     return pages
+
+def MakePdf(pages, name):
+    """Makes a PDF from pages with the given name"""
+    pdf = PdfFileWriter()
+    for page in pages:
+        pdf.addPage(page)
+
+    pdfStream = open("{}.pdf".format(name), "wb")
+    pdf.write(pdfStream)

@@ -19,6 +19,7 @@
 
 # Import necessary libraries
 import os
+import shutil
 import collections
 from glob import glob
 from export_support import *
@@ -65,7 +66,7 @@ def main():
                 app.update(dem)
 
     # Create and/or clean up workspace for files
-    print("Creating folder for applications...")
+    print("Creating folders for applications...")
     appFolder = "2017_Applications"
     if not os.path.exists(appFolder):
         # Create workspace (e.g. folder to hold applications)
@@ -76,6 +77,21 @@ def main():
             file_path = os.path.join(appFolder, file)
             if os.path.isfile(file_path):
                 os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+
+    # Make folders for everything
+    os.chdir(appFolder)
+    os.mkdir("Applications")
+    os.mkdir("Cover Page")
+    os.mkdir("Statement of Interest")
+    os.mkdir("CV or Resume")
+    os.mkdir("(Unofficial) Transcript")
+    os.mkdir("Recommendation Letter #1")
+    os.mkdir("Recommendation Letter #2")
+    os.mkdir("Recommendation Letter #3")
+    os.mkdir("Recommendation Letter #4")
+    os.chdir("..")
 
     # Make section template PDFs
     MakeSectionPdf("Cover Page")
@@ -143,25 +159,26 @@ def main():
         cover = GetPdf("{}_cover.pdf".format(app["AppID"]))
 
         # Add pages to PDF (with header and watermark, if appropriate)
+        print("Building Application PDF...")
         pages = AddHeader(cover.pages, app)
         pages = AddSection(pages, "Cover Page")
         if not completed:
             pages = AddWatermark(pages)
+        MakePdf(pages, "2017_Applications/Cover Page/Cover Page-{}".format(app["AppID"]))
         for page in pages:
             appPdf.addPage(page)
 
-
-        print("Building Application PDF...")
         for section, doc in docs.items():
             pages = AddHeader(doc.pages, app)
             pages = AddSection(pages, section)
             if not completed:
                 pages = AddWatermark(pages)
+            MakePdf(pages, "2017_Applications/{}/{}-{}".format(section, section, app["AppID"]))
             for page in pages:
                 appPdf.addPage(page)
 
         # Write final PDF
-        appStream = open("2017_Applications/{}.pdf".format(app["AppID"]), "wb")
+        appStream = open("2017_Applications/Applications/{}.pdf".format(app["AppID"]), "wb")
         appPdf.write(appStream)
 
         app_count += 1
@@ -183,6 +200,19 @@ def main():
     os.remove("Recommendation Letter #2.pdf")
     os.remove("Recommendation Letter #3.pdf")
     os.remove("Recommendation Letter #4.pdf")
+
+    # print("Creating Compiled Statements of Interest PDF")
+
+    # # Create a merger to merge all the PDFs
+    # compiledSois = PdfFileMerger()
+
+    # # Get file path of all applicant PDFs
+    # appPdfs = glob("2017_Applications/*")
+
+    # # For each one, add to compiledSois
+    # for pdfPath in appPdfs:
+    #     pdf = open(pdfPath, "rb")
+
 
 
     print("\n--------Success! All Done.--------")
