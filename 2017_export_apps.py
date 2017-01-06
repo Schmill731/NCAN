@@ -175,6 +175,15 @@ def main():
         for file in glob("*_{}.pdf".format(ext)):
             os.remove(file)
 
+    os.remove("Cover Page.pdf")
+    os.remove("Statement of Interest.pdf")
+    os.remove("CV or Resume.pdf")
+    os.remove("(Unofficial) Transcript.pdf")
+    os.remove("Recommendation Letter #1.pdf")
+    os.remove("Recommendation Letter #2.pdf")
+    os.remove("Recommendation Letter #3.pdf")
+    os.remove("Recommendation Letter #4.pdf")
+
 
     print("\n--------Success! All Done.--------")
     # Get all SOIs to compile big PDF
