@@ -110,11 +110,11 @@ def AddHeader(pages, app):
         page.mergePage(header)
     return pages
 
-def AddSection(pages, app, section):
+def AddSection(pages, section):
     """Adds the section to the header of each page. Pages is expected to be a
     list of page objects from PdfFileReader. Section is taken from sample file
     located in same directory as the script."""
     section = GetPdf("{}.pdf".format(section)).getPage(0)
     for page in pages:
         page.mergePage(section)
-        return pages
+    return pages

@@ -19,6 +19,7 @@
 
 # Import necessary libraries
 import os
+import collections
 from glob import glob
 from export_support import *
 from pdf_templates import *
@@ -81,7 +82,10 @@ def main():
     MakeSectionPdf("Statement of Interest")
     MakeSectionPdf("CV or Resume")
     MakeSectionPdf("(Unofficial) Transcript")
-    MakeSectionPdf("Recommendation Letter")
+    MakeSectionPdf("Recommendation Letter #1")
+    MakeSectionPdf("Recommendation Letter #2")
+    MakeSectionPdf("Recommendation Letter #3")
+    MakeSectionPdf("Recommendation Letter #4")
 
     # Make application PDFs
     print("Making PDFs...")
@@ -92,20 +96,20 @@ def main():
 
         #Create file to build PDF
         appPdf = PdfFileWriter()
-        docs = []
+        docs = collections.OrderedDict()
 
         # Make SOI first (basic info last, to check if all parts submitted)
         print("Making Statement of Interest...")
         MakeSoiPdf(app)
         soi = GetPdf("{}_SOI.pdf".format(app["AppID"]))
-        docs.append(soi)
+        docs["Statement of Interest"] = soi
 
         # Get CV
         print("Getting CV...")
         cvExists = False
         cv = GetPdf("Summer_Course_2017_Application/Q12/{}*.pdf".format(app["AppID"]))
         if cv:
-            docs.append(cv)
+            docs["CV or Resume"] = cv
             cvExists = True
 
         # Get transcript
@@ -113,7 +117,7 @@ def main():
         transcriptExists = False
         transcript = GetPdf("Summer_Course_2017_Application/Q11/{}*.pdf".format(app["AppID"]))
         if transcript:
-            docs.append(transcript)
+            docs["(Unofficial) Transcript"] = transcript
             transcriptExists = True
 
         # Get recommendation letters and add it to WIP PDF
@@ -124,7 +128,7 @@ def main():
             if "Rec{}ID".format(num) in app.keys():
                 letter = GetPdf("Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
                 if letter:
-                    docs.append(letter)
+                    docs["Recommendation Letter #" + str(i)] = letter
                     letterExists[num] = True
 
         # Dictionary of Existence
@@ -137,12 +141,20 @@ def main():
 
         # Get Cover Page
         cover = GetPdf("{}_cover.pdf".format(app["AppID"]))
-        docs.insert(0, cover)
 
         # Add pages to PDF (with header and watermark, if appropriate)
+        pages = AddHeader(cover.pages, app)
+        pages = AddSection(pages, "Cover Page")
+        if not completed:
+            pages = AddWatermark(pages)
+        for page in pages:
+            appPdf.addPage(page)
+
+
         print("Building Application PDF...")
-        for doc in docs:
+        for section, doc in docs.items():
             pages = AddHeader(doc.pages, app)
+            pages = AddSection(pages, section)
             if not completed:
                 pages = AddWatermark(pages)
             for page in pages:
