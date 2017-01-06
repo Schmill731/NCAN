@@ -28,6 +28,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Frame, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
+import glob
 
 # High-level walkthrough
 def main():
@@ -78,17 +79,34 @@ def main():
         outpdf = PdfFileWriter()
 
         #If incomplete, add a watermark
-        watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
         if not completed:
             pageCount = inpdf.getNumPages()
+            pages = []
             for num in range(0, pageCount):
-                page = inpdf.getPage(num)
-                page.mergePage(watermark)
+                pages.append(inpdf.getPage(num))
+            pages = addWatermark(pages)
+            for page in pages:
+                outpdf.addPage(page)
+
+        # Open CV and Transcript
+        cvPath = glob.glob("../Summer_Course_2017_Application/Q12/{}*.pdf".format(app["AppID"]))
+        if cvPath:
+            cvpdf = PdfFileReader(open(cvPath[0], "rb"))
+            cvCount = cvpdf.getNumPages()
+            cvPages = []
+            for num in range(0, cvCount):
+                cvPages.append(cvpdf.getPage(num))
+            cvPages = addWatermark(cvPages)
+            cvPages = addHeader(cvPages, app["AppID"])
+            for page in cvPages:
                 outpdf.addPage(page)
 
         # Write new PDF
         outputStream = open("../2017_Applications/{}.pdf".format(app["AppID"]), "wb")
         outpdf.write(outputStream)
+
+        #delete header file
+        os.remove("../2017_Applications/{}_Header.pdf".format(app["AppID"]))
 
 
 
@@ -287,38 +305,15 @@ def makeApplicationPDF(app):
     # Make PDF with pre-defined page templates.
     pdf.build(info, onFirstPage=BasicInfo, onLaterPages=soiTemplate)
 
+    #Make pdf with header to add to each page of application
+    header = SimpleDocTemplate("../2017_Applications/{}_Header.pdf".format(app["AppID"]), 
+        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
+    def headerTemplate(canvas, doc): BlankHeader(app, canvas, doc)
+
+    header.build([Paragraph("", styles["title"])], onFirstPage=headerTemplate)
+
     #Return whether the application is complete or not.
     return completed
-
-def BasicInfoPage(app, canvas, doc):
-    #Save state of PDF
-    canvas.saveState()
-
-    #Set Running Header of Applicant ID
-    canvas.setFont("Times-Roman", 12)
-    canvas.drawString(72, 744, "Applicant ID: " + app["AppID"])
-
-    #Write basic applicant info
-    canvas.setFont("Times-Bold", 18)
-    canvas.drawCentredString(306, 702, "Applicant Information")
-
-    #Restore the PDF
-    canvas.restoreState()
-
-def soiPages(app, canvas, doc):
-    #Save state of PDF
-    canvas.saveState()
-
-    #Set Running Header of Applicant ID
-    canvas.setFont("Times-Roman", 12)
-    canvas.drawString(72, 744, "Applicant ID: " + app["AppID"])
-
-    #Set Title
-    canvas.setFont("Times-Bold", 18)
-    canvas.drawCentredString(306, 702, "Statement of Interest: Page {}".format(int(doc.page) - 1))
-
-    #Restore the PDF
-    canvas.restoreState()
 
 
 

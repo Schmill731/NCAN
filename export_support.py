@@ -10,9 +10,11 @@
 
 #imports
 import csv
+import os
 from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.units import inch
 from pdf_templates import *
+from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
 
 #Common junk to all Qualtrics (Legacy) CSV exports
 commonJunk = ["ResponseSet", "BlankName", "ExternalDataReference",
@@ -76,3 +78,15 @@ def writeSection(canvas, paragraphs, x, y, width, height, id):
 
 
     return id
+
+watermark = PdfFileReader(open("watermark.pdf", "rb")).getPage(0)
+def addWatermark(pages):
+    for page in pages:
+        page.mergePage(watermark)
+    return pages
+
+def addHeader(pages, appID):
+    header = PdfFileReader(open("../2017_Applications/{}_Header.pdf".format(appID), "rb")).getPage(0)
+    for page in pages:
+        page.mergePage(header)
+    return pages

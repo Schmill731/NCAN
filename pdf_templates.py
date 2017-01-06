@@ -80,15 +80,41 @@ styles["soi"] = ParagraphStyle(
     parent=styles["normal"],
     firstLineIndent=36)
 
+def AppHeader(funct):
+    def wrapper(app, canvas, doc):
+        #Save state of PDF
+        canvas.saveState()
 
-# class ApplicantPDF(BaseDocTemplate):
-#     """A document template for creating PDFs from applicant responses."""
+        #Set Running Header of Applicant ID
+        canvas.setFont("Times-Roman", 12)
+        canvas.drawString(6, 778, "Applicant ID: " + app["AppID"])
 
-#     def __init__(self, appID):
-#         super().__init__(appID + ".pdf", pagesize=letter, 
-#             topMargin=inch/2)
+        #Add other templates
+        funct(app, canvas, doc)
 
-#     def afterInit(self):
+        #Restore the PDF
+        canvas.restoreState()
+
+    return wrapper
+
+@AppHeader
+def BasicInfoPage(app, canvas, doc):
+    #Write basic applicant info
+    canvas.setFont("Times-Bold", 18)
+    canvas.drawCentredString(306, 702, "Applicant Information")
+
+
+@AppHeader
+def soiPages(app, canvas, doc):
+    #Set Title
+    canvas.setFont("Times-Bold", 18)
+    canvas.drawCentredString(306, 702, "Statement of Interest: Page {}".format(int(doc.page) - 1))
+
+@AppHeader
+def BlankHeader(app, canvas, doc):
+    #Just add the header, nothing else
+    pass
+
 
 
 
