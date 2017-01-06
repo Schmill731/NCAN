@@ -15,48 +15,39 @@
 # Summer Course Recommendation Files: Q1 (Folder)
 # Summer Course 2017 Registration Responses: Summer_Course_2017_Registration.csv
 # Summer Course 2017 Application Responses: Summer_Course_2017_Application.csv
-# Summer Course 2017 Application Responses: Summer_Course_2017_Application (Folder)
+# Summer Course 2017 Application Files: Summer_Course_2017_Application (Folder)
 
 # Import necessary libraries
-import csv
 import os
+import glob
 from export_support import *
 from pdf_templates import *
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Frame, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak
 from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
-import glob
 
-# High-level walkthrough
+# High-level Walkthrough of script
 def main():
 
-    #Import Qualtrics Data for use here
+    # Import Qualtrics Data for use here- this is only the data, no file uploads
     regs = importRegistrationData()
     apps = importApplicationData()
     recs = importRecommendationData()
     dems = importDemographicData()
 
-    #Join applications with registrations
+    # Join registration data with application data
     for app in apps:
         for reg in regs:
             if reg["Email"] == app["Email"]:
                 app.update(reg)
                 break
 
-    #Join recommendations with applications
+    # Join recommendation data with application data
     for rec in recs:
         for app in apps:
-            if app["Rec1Email"] == rec["Email"]:
-                app["Rec1ID"] = rec["recID"]
-            if app["Rec2Email"] == rec["Email"]:
-                app["Rec2ID"] = rec["recID"]
-            if app["Rec3Email"] == rec["Email"]:
-                app["Rec3ID"] = rec["recID"]
-            if app["Rec4Email"] == rec["Email"]:
-                app["Rec4ID"] = rec["recID"]
+            for num in range(1, 5):
+                if app["Rec{}Email".format(num)] == rec["Email"]:
+                    app["Rec{}ID".format(num)] = rec["recID"]
 
     # Join demographic info with applications
     for dem in dems:
@@ -64,9 +55,19 @@ def main():
             if dem["AppID"] == app["AppID"]:
                 app.update(dem)
 
-    # Make folder for pdfs if it does not exist
-    if not os.path.exists('../2017_Applications'):
-        os.makedirs('../2017_Applications')
+    # Create and/or clean up workspace for files
+    appFolder = "../2017_Applications"
+    if not os.path.exists(appFolder):
+
+        # Create workspace (e.g. folder to hold applications)
+        os.makedirs(appFolder)
+    else:
+
+        # Clean up workspace (e.g. delete all files in folder)
+        for file in os.listdir(appFolder):
+            file_path = os.path.join(folder, file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     # Make application PDFs
     for app in apps:
