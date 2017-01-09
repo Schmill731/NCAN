@@ -61,9 +61,10 @@ def main():
 
             # Link recommenders with applications
             for num in range(1, 5):
-                if app["Rec{}Email".format(num)] == rec["Email"]:
-                    app["Rec{}ID".format(num)] = rec["recID"]
-                    recCount += 1
+                if "Rec{}Email".format(num) in app.keys():
+                    if app["Rec{}Email".format(num)] == rec["Email"]:
+                        app["Rec{}ID".format(num)] = rec["recID"]
+                        recCount += 1
             app["RecCount"] = recCount
 
     # Join demographic info with applications
@@ -99,7 +100,7 @@ def main():
     print("Making PDFs...")
     appCount = 1
     for app in apps:
-        print("\n--------Starting Application {} of {}--------".format(app_count,
+        print("\n--------Starting Application {} of {}--------".format(appCount,
             len(apps)))
         print("Applicant ID: {}".format(app["AppID"]))
 
@@ -133,7 +134,7 @@ def main():
         # Get recommendation letters and add it to WIP PDF
         print("Getting Letters of Recommendation...")
         letterExists = [None]
-        for num in range(1, app["RecCount"] + 1):
+        for num in range(1, 5):
             letterExists.append(False)
             if "Rec{}ID".format(num) in app.keys():
                 letter = GetPdf("../Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
@@ -154,6 +155,7 @@ def main():
 
         # Add pages to PDF (with header and watermark, if appropriate)
         print("Building Application PDF...")
+        appPdf = PdfFileWriter()
         pages = AddHeader(cover.pages, app)
         pages = AddSection(pages, "Cover Page")
         if not completed:
@@ -170,7 +172,6 @@ def main():
                 appPdf.addPage(page)
 
         # Write PDF
-        appPdf = PdfFileWriter()
         appStream = open("../{}_Applications/{}.pdf".format(year, 
             app["AppID"]), "wb")
         appPdf.write(appStream)
@@ -215,9 +216,9 @@ def main():
 
     # Upload files to Google Drive
     appCount = 1
-    print("\n\n--------Starting Drive Upload...--------")
+    print("\n\n--------Starting Drive Upload--------")
     for app in apps:
-        print("Uploading {} of {}".format(appCount, len(apps)))
+        print("Uploading {} of {}...".format(appCount, len(apps)))
         file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", 
             "id": "{}".format(GDriveDestID)}], 
             "title":"{}.pdf".format(app["AppID"])})
@@ -404,23 +405,26 @@ def MakeCoverPage(app, fileExists):
 
     #Print recommender info
     text.append(Paragraph("Recommender Information", styles["heading1"]))
-    for i in range(1, app["RecCount"] + 1):
-        if app["Rec{}Email".format(i)]:
-            text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-            text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + 
-                str(i) + "First"], app["Rec" + str(i) + "Last"]), 
-                styles["normal"])),
-            text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + 
-                str(i) + "Email"]), styles["normal"]))
+    for i in range(1, 5):
+        if "Rec{}Email".format(i) in app.keys():
+            if app["Rec{}Email".format(i)]:
+                text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
+                text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + 
+                    str(i) + "First"], app["Rec" + str(i) + "Last"]), 
+                    styles["normal"])),
+                text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + 
+                    str(i) + "Email"]), styles["normal"]))
 
-            # Check whether letter was submitted
-            if fileExists["Letters"][i]:
-                recSubmit = "YES"
-                recsSubmitted += 1
-            else:
-                recSubmit = "NO (Check Recommendation Letters folder in case of error)"
-            text.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit),
-                styles["normal"]))
+                # Check whether letter was submitted
+                if fileExists["Letters"][i]:
+                    recSubmit = "YES"
+                    recsSubmitted += 1
+                else:
+                    recSubmit = "NO (Check Recommendation Letters folder in case of error)"
+                text.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit),
+                    styles["normal"]))
+        else:
+            break
 
     # If application is incomplete, print that
     completed = True
