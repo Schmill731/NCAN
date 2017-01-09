@@ -27,10 +27,12 @@ from pdf_templates import *
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak
 from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 # High-level Walkthrough of script
 def main():
-    print("/n--------Exporting 2017 Applications--------")
+    print("\n--------Exporting 2017 Applications--------")
 
     # Import Qualtrics Data for use here- this is only the data, no file uploads
     print("Importing Data...")
@@ -80,34 +82,21 @@ def main():
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
 
-    # Make folders for everything
-    os.chdir(appFolder)
-    os.mkdir("Applications")
-    os.mkdir("Cover Page")
-    os.mkdir("Statement of Interest")
-    os.mkdir("CV or Resume")
-    os.mkdir("(Unofficial) Transcript")
-    os.mkdir("Recommendation Letter 1")
-    os.mkdir("Recommendation Letter 2")
-    os.mkdir("Recommendation Letter 3")
-    os.mkdir("Recommendation Letter 4")
-    os.chdir("..")
-
     # Make section template PDFs
     MakeSectionPdf("Cover Page")
     MakeSectionPdf("Statement of Interest")
     MakeSectionPdf("CV or Resume")
     MakeSectionPdf("(Unofficial) Transcript")
-    MakeSectionPdf("Recommendation Letter 1")
-    MakeSectionPdf("Recommendation Letter 2")
-    MakeSectionPdf("Recommendation Letter 3")
-    MakeSectionPdf("Recommendation Letter 4")
+    MakeSectionPdf("Recommendation Letter #1")
+    MakeSectionPdf("Recommendation Letter #2")
+    MakeSectionPdf("Recommendation Letter #3")
+    MakeSectionPdf("Recommendation Letter #4")
 
     # Make application PDFs
     print("Making PDFs...")
     app_count = 1
     for app in apps:
-        print("\n-------- Starting Application {} of {}--------".format(app_count, len(apps)))
+        print("\n--------Starting Application {} of {}--------".format(app_count, len(apps)))
         print("Applicant: {}".format(app["AppID"]))
 
         #Create file to build PDF
@@ -139,12 +128,12 @@ def main():
         # Get recommendation letters and add it to WIP PDF
         print("Getting Letters of Recommendation...")
         letterExists = [None]
-        for i in range(1, app["RecCount"] + 1):
-            letterExists.insert(num, False)
+        for num in range(1, app["RecCount"] + 1):
+            letterExists.append(False)
             if "Rec{}ID".format(num) in app.keys():
                 letter = GetPdf("Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
                 if letter:
-                    docs["Recommendation Letter " + str(i)] = letter
+                    docs["Recommendation Letter #" + str(num)] = letter
                     letterExists[num] = True
 
         # Dictionary of Existence
@@ -164,7 +153,6 @@ def main():
         pages = AddSection(pages, "Cover Page")
         if not completed:
             pages = AddWatermark(pages)
-        MakePdf(pages, "2017_Applications/Cover Page/Cover Page-{}".format(app["AppID"]))
         for page in pages:
             appPdf.addPage(page)
 
@@ -173,12 +161,11 @@ def main():
             pages = AddSection(pages, section)
             if not completed:
                 pages = AddWatermark(pages)
-            MakePdf(pages, "2017_Applications/{}/{}-{}".format(section, section, app["AppID"]))
             for page in pages:
                 appPdf.addPage(page)
 
         # Write final PDF
-        appStream = open("2017_Applications/Applications/{}.pdf".format(app["AppID"]), "wb")
+        appStream = open("2017_Applications/{}.pdf".format(app["AppID"]), "wb")
         appPdf.write(appStream)
 
         app_count += 1
@@ -196,15 +183,39 @@ def main():
     os.remove("Statement of Interest.pdf")
     os.remove("CV or Resume.pdf")
     os.remove("(Unofficial) Transcript.pdf")
-    os.remove("Recommendation Letter 1.pdf")
-    os.remove("Recommendation Letter 2.pdf")
-    os.remove("Recommendation Letter 3.pdf")
-    os.remove("Recommendation Letter 4.pdf")
+    os.remove("Recommendation Letter #1.pdf")
+    os.remove("Recommendation Letter #2.pdf")
+    os.remove("Recommendation Letter #3.pdf")
+    os.remove("Recommendation Letter #4.pdf")
+
+    print("\n--------Uploading files to Google Drive--------")
+
+    # Authenticate Google Drive
+    gauth = GoogleAuth()
+
+    # Create local webserver and auto handles authentication.
+    gauth.LocalWebserverAuth()
+
+    # Create GoogleDrive instance with authenticated GoogleAuth instance.
+    drive = GoogleDrive(gauth)
+
+    # Auto-iterate through all files in the root folder to find Summer Course 2017 folder
+    file_list = drive.ListFile({'q': "'0B67b4FFl6pYlVnY2cVpFbjlGdmM' in parents and trashed=false"}).GetList()
+    for file in file_list:
+        if "R_" in file["title"] and ".pdf" in file["title"]:
+            file.Delete()
+
+    # Upload files to Google Drive
+    for app in apps:
+        file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", "id": "0B67b4FFl6pYlVnY2cVpFbjlGdmM"}], "title":"{}.pdf".format(app["AppID"])})
+
+        # Read file and set it as a content of this instance.
+        file.SetContentFile("2017_Applications/{}.pdf".format(app["AppID"]))
+        file.Upload() # Upload the file.
 
 
 
     print("\n--------Success! All Done.--------")
-    # Get all SOIs to compile big PDF
 
 
 
@@ -372,19 +383,20 @@ def MakeCoverPage(app, fileExists):
     #Print recommender info
     text.append(Paragraph("Recommender Information", styles["heading1"]))
     for i in range(1, app["RecCount"] + 1):
-        text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-        text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
-        text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
+        if app["Rec{}Email".format(i)]:
+            text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
+            text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
+            text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
 
 
-        # Check whether letter was submitted
-        if fileExists["Letters"][i]:
-            recSubmit = "YES"
-            recsSubmitted += 1
-        else:
-            recSubmit = "NO (Check Recommendation Letters folder in case of error)"
-        text.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit),
-            styles["normal"]))
+            # Check whether letter was submitted
+            if fileExists["Letters"][i]:
+                recSubmit = "YES"
+                recsSubmitted += 1
+            else:
+                recSubmit = "NO (Check Recommendation Letters folder in case of error)"
+            text.append(Paragraph("<b>Recommendation Submitted?</b> {}".format(recSubmit),
+                styles["normal"]))
 
     # If application is incomplete, print that
     completed = True
