@@ -5,17 +5,17 @@
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
 #
-# Last Updated: 1/9/16
+# Last Updated: 1/9/17
 #
 # Used to convert Qualtrics CSV response data to easy-to-review PDFs for each 
 # response. Assumes that the CSV files and other folders are located in the 
-# same directory and are named as follows (default of Qualtrics exports):
+# parent directory (..) and are named as follows (default of Qualtrics exports):
 # Demographic Supplement Responses: Demographic_Supplement.csv
 # Summer Course Recommendation Responses: Summer_Course_Recommendations.csv
 # Summer Course Recommendation Files: Q1 (Folder)
-# Summer Course 2017 Registration Responses: Summer_Course_2017_Registration.csv
-# Summer Course 2017 Application Responses: Summer_Course_2017_Application.csv
-# Summer Course 2017 Application Files: Summer_Course_2017_Application (Folder)
+# Summer Course {year} Registration Responses: Summer_Course_{year}_Registration.csv
+# Summer Course {year} Application Responses: Summer_Course_{year}_Application.csv
+# Summer Course {year} Application Files: Summer_Course_{year}_Application (Folder)
 
 # Import necessary libraries
 import os
@@ -26,13 +26,17 @@ from export_support import *
 from pdf_templates import *
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak
-from PyPDF2 import PdfFileWriter, PdfFileReader, PdfFileMerger
+from PyPDF2 import PdfFileWriter, PdfFileReader
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
+# Global variables
+year = "2017"
+GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
+
 # High-level Walkthrough of script
 def main():
-    print("\n--------Exporting 2017 Applications--------")
+    print("\n--------Exporting {} Applications--------".format(year))
 
     # Import Qualtrics Data for use here- this is only the data, no file uploads
     print("Importing Data...")
@@ -49,12 +53,13 @@ def main():
                 app.update(reg)
                 break
 
-    # Save number of recommenders
-    recCount = 0
-
     # Join recommendation data with application data
-    for rec in recs:
-        for app in apps:
+    for app in apps:
+        for rec in recs:
+            # Save number of recommenders
+            recCount = 0
+
+            # Link recommenders with applications
             for num in range(1, 5):
                 if app["Rec{}Email".format(num)] == rec["Email"]:
                     app["Rec{}ID".format(num)] = rec["recID"]
@@ -69,7 +74,7 @@ def main():
 
     # Create and/or clean up workspace for files
     print("Creating folders for applications...")
-    appFolder = "2017_Applications"
+    appFolder = "../{}_Applications".format(year)
     if not os.path.exists(appFolder):
         # Create workspace (e.g. folder to hold applications)
         os.makedirs(appFolder)
@@ -83,24 +88,22 @@ def main():
                 shutil.rmtree(file_path)
 
     # Make section template PDFs
-    MakeSectionPdf("Cover Page")
-    MakeSectionPdf("Statement of Interest")
-    MakeSectionPdf("CV or Resume")
-    MakeSectionPdf("(Unofficial) Transcript")
-    MakeSectionPdf("Recommendation Letter #1")
-    MakeSectionPdf("Recommendation Letter #2")
-    MakeSectionPdf("Recommendation Letter #3")
-    MakeSectionPdf("Recommendation Letter #4")
+    templates = ["Cover Page", "Statement of Interest", "CV or Resume",
+        "(Unofficial) Transcript", "Recommendation Letter #1", 
+        "Recommendation Letter #2", "Recommendation Letter #3", 
+        "Recommendation Letter #4"]
+    for template in templates:
+        MakeSectionPdf(template)
 
     # Make application PDFs
     print("Making PDFs...")
-    app_count = 1
+    appCount = 1
     for app in apps:
-        print("\n--------Starting Application {} of {}--------".format(app_count, len(apps)))
-        print("Applicant: {}".format(app["AppID"]))
+        print("\n--------Starting Application {} of {}--------".format(app_count,
+            len(apps)))
+        print("Applicant ID: {}".format(app["AppID"]))
 
-        #Create file to build PDF
-        appPdf = PdfFileWriter()
+        #Create dictionary to hold PDF pages
         docs = collections.OrderedDict()
 
         # Make SOI first (basic info last, to check if all parts submitted)
@@ -112,7 +115,8 @@ def main():
         # Get CV
         print("Getting CV...")
         cvExists = False
-        cv = GetPdf("Summer_Course_2017_Application/Q12/{}*.pdf".format(app["AppID"]))
+        cv = GetPdf("../Summer_Course_{}_Application/Q12/{}*.pdf".format(year,
+            app["AppID"]))
         if cv:
             docs["CV or Resume"] = cv
             cvExists = True
@@ -120,7 +124,8 @@ def main():
         # Get transcript
         print("Getting Transcript...")
         transcriptExists = False
-        transcript = GetPdf("Summer_Course_2017_Application/Q11/{}*.pdf".format(app["AppID"]))
+        transcript = GetPdf("../Summer_Course_{}_Application/Q11/{}*.pdf".format(year,
+            app["AppID"]))
         if transcript:
             docs["(Unofficial) Transcript"] = transcript
             transcriptExists = True
@@ -131,7 +136,7 @@ def main():
         for num in range(1, app["RecCount"] + 1):
             letterExists.append(False)
             if "Rec{}ID".format(num) in app.keys():
-                letter = GetPdf("Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
+                letter = GetPdf("../Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
                 if letter:
                     docs["Recommendation Letter #" + str(num)] = letter
                     letterExists[num] = True
@@ -164,11 +169,14 @@ def main():
             for page in pages:
                 appPdf.addPage(page)
 
-        # Write final PDF
-        appStream = open("2017_Applications/{}.pdf".format(app["AppID"]), "wb")
+        # Write PDF
+        appPdf = PdfFileWriter()
+        appStream = open("../{}_Applications/{}.pdf".format(year, 
+            app["AppID"]), "wb")
         appPdf.write(appStream)
 
-        app_count += 1
+        # Increase count for display
+        appCount += 1
 
     print("\n--------Post-Processing PDFs--------")
 
@@ -193,27 +201,30 @@ def main():
     # Authenticate Google Drive
     gauth = GoogleAuth()
 
-    # Create local webserver and auto handles authentication.
+    # Create local webserver and auto-handle authentication.
     gauth.LocalWebserverAuth()
 
     # Create GoogleDrive instance with authenticated GoogleAuth instance.
     drive = GoogleDrive(gauth)
 
-    # Auto-iterate through all files in the root folder to find Summer Course 2017 folder
-    file_list = drive.ListFile({'q': "'0B67b4FFl6pYlVnY2cVpFbjlGdmM' in parents and trashed=false"}).GetList()
+    # Delete all old application files
+    file_list = drive.ListFile({'q': "'{}' in parents and trashed=false".format(GDriveDestID)}).GetList()
     for file in file_list:
         if "R_" in file["title"] and ".pdf" in file["title"]:
             file.Delete()
 
     # Upload files to Google Drive
-    appCount = 0
+    appCount = 1
     print("\n\n--------Starting Drive Upload...--------")
     for app in apps:
         print("Uploading {} of {}".format(appCount, len(apps)))
-        file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", "id": "0B67b4FFl6pYlVnY2cVpFbjlGdmM"}], "title":"{}.pdf".format(app["AppID"])})
+        file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", 
+            "id": "{}".format(GDriveDestID)}], 
+            "title":"{}.pdf".format(app["AppID"])})
 
         # Read file and set it as a content of this instance.
-        file.SetContentFile("2017_Applications/{}.pdf".format(app["AppID"]))
+        file.SetContentFile("../{}_Applications/{}.pdf".format(year,
+            app["AppID"]))
         file.Upload() # Upload the file.
         appCount += 1
 
@@ -239,7 +250,7 @@ def ImportRegistrationData():
     regJunk = ["ResponseID", "BlankEmail", "Intro", "Ones", "RecInfo"]
 
     # Read in Registration Data
-    return readQualtricsCSV("Summer_Course_2017_Registration.csv", regHeader, 
+    return readQualtricsCSV("../Summer_Course_2017_Registration.csv", regHeader, 
         regJunk)
 
 def ImportApplicationData():
@@ -255,7 +266,8 @@ def ImportApplicationData():
     appJunk = ["BlankEmail"]
 
     # Read in Application Data
-    apps = readQualtricsCSV("Summer_Course_2017_Application.csv", appHeader, appJunk)
+    apps = readQualtricsCSV("../Summer_Course_2017_Application.csv", appHeader,
+        appJunk)
 
     # Remove blank responses from apps
     return [x for x in apps if x["Email"] != '']
@@ -273,7 +285,7 @@ def ImportRecommendationData():
     recJunk = ["Intro", "recURL"]
 
     # Read in Recommendation Data
-    return readQualtricsCSV("Summer_Course_Recommendations.csv", recHeader, 
+    return readQualtricsCSV("../Summer_Course_Recommendations.csv", recHeader, 
         recJunk)
 
 def ImportDemographicData():
@@ -291,7 +303,7 @@ def ImportDemographicData():
         "JunkEdOther"]
 
     # Read in demographic data
-    return readQualtricsCSV("Demographic_Supplement.csv", demHeader, demJunk)
+    return readQualtricsCSV("../Demographic_Supplement.csv", demHeader, demJunk)
 
 
 def MakeCoverPage(app, fileExists):
@@ -302,12 +314,14 @@ def MakeCoverPage(app, fileExists):
     #Create PDF
 
     cover = SimpleDocTemplate("{}_cover.pdf".format(app["AppID"]), 
-        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72, bottomMargin=72)
+        pagesize=letter, topMargin=108, rightMargin=72, leftMargin=72,
+        bottomMargin=72)
 
     # Compile text to print on PDF
     text = [
         Paragraph("Basic Information", styles["heading1"]),
-        Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), styles["normal"]),
+        Paragraph("<b>Name:</b> {} {}".format(app["First"], app["Last"]), 
+            styles["normal"]),
         Paragraph("<b>Email:</b> {}".format(app["Email"]), styles["normal"]),
         Paragraph("Demographic Information", styles["heading1"])]
 
@@ -326,7 +340,8 @@ def MakeCoverPage(app, fileExists):
                 hispanic = "Yes"
         elif not hispanic:
             hispanic = "No answer"
-        text.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic), styles["normal"]))
+        text.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic),
+            styles["normal"]))
 
         #Race/Ethnicity
         race = ""
@@ -349,7 +364,8 @@ def MakeCoverPage(app, fileExists):
             race = race + app["Other"]
         if not race:
             race = "No answer"
-        text.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race), styles["normal"]))
+        text.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race),
+            styles["normal"]))
 
         # Gender
         gender = ""
@@ -359,7 +375,8 @@ def MakeCoverPage(app, fileExists):
             gender = "Female"
         elif gender:
             gender = "No answer"
-        text.append(Paragraph("<b>Gender:</b> {}".format(gender), styles["normal"]))
+        text.append(Paragraph("<b>Gender:</b> {}".format(gender),
+            styles["normal"]))
 
         #Education
         ed = ""
@@ -379,7 +396,8 @@ def MakeCoverPage(app, fileExists):
             ed = ed + app["Other"]
         if not ed:
             ed = "No answer"
-        text.append(Paragraph("<b>Education:</b> {}".format(ed), styles["normal"]))
+        text.append(Paragraph("<b>Education:</b> {}".format(ed),
+            styles["normal"]))
 
     # Counter to track number of recommendations submitted
     recsSubmitted = 0
@@ -389,9 +407,11 @@ def MakeCoverPage(app, fileExists):
     for i in range(1, app["RecCount"] + 1):
         if app["Rec{}Email".format(i)]:
             text.append(Paragraph("Recommender #" + str(i), styles["heading2"]))
-            text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + str(i) + "First"], app["Rec" + str(i) + "Last"]), styles["normal"])),
-            text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + str(i) + "Email"]), styles["normal"]))
-
+            text.append(Paragraph("<b>Name:</b> {} {}".format(app["Rec" + 
+                str(i) + "First"], app["Rec" + str(i) + "Last"]), 
+                styles["normal"])),
+            text.append(Paragraph("<b>Email:</b> {}".format(app["Rec" + 
+                str(i) + "Email"]), styles["normal"]))
 
             # Check whether letter was submitted
             if fileExists["Letters"][i]:
@@ -420,7 +440,7 @@ def MakeCoverPage(app, fileExists):
             text.append(Paragraph("Reason: No Transcript (check Transcript folder in case of error)",
                 styles["title"]))
 
-    #Make templates
+    #Make template
     def CoverTemplate(canvas, doc): CoverPage(app, canvas, doc)
 
     # Make PDF with pre-defined page templates.

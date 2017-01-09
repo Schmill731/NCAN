@@ -3,10 +3,10 @@
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
 #
-# Last Updated: 12/29/16
+# Last Updated: 1/9/17
 #
 # Functions to help export QualtricsCSV files to an easy-to-read format.
-# Designed to be used with 2017_export_apps.py
+# Designed to be used with export_apps.py
 
 #imports
 import csv
@@ -118,12 +118,3 @@ def AddSection(pages, section):
     for page in pages:
         page.mergePage(section)
     return pages
-
-def MakePdf(pages, name):
-    """Makes a PDF from pages with the given name"""
-    pdf = PdfFileWriter()
-    for page in pages:
-        pdf.addPage(page)
-
-    pdfStream = open("{}.pdf".format(name), "wb")
-    pdf.write(pdfStream)

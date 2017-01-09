@@ -152,7 +152,9 @@ class SoiCanvasMaker(canvas.Canvas):
         Add the page number
         """
         self.setFont("Times-Bold", 18)
-        self.drawCentredString(306, 702, "Statement of Interest: Page {} of {}".format(self._pageNumber, page_count))
+        self.drawCentredString(306, 702,
+            "Statement of Interest: Page {} of {}".format(self._pageNumber, 
+                page_count))
 
 
 
