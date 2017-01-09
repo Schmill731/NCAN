@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 2017_export_apps.py
+# export_apps.py
 #
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
@@ -206,12 +206,16 @@ def main():
             file.Delete()
 
     # Upload files to Google Drive
+    appCount = 0
+    print("\n\n--------Starting Drive Upload...--------")
     for app in apps:
+        print("Uploading {} of {}".format(appCount, len(apps)))
         file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", "id": "0B67b4FFl6pYlVnY2cVpFbjlGdmM"}], "title":"{}.pdf".format(app["AppID"])})
 
         # Read file and set it as a content of this instance.
         file.SetContentFile("2017_Applications/{}.pdf".format(app["AppID"]))
         file.Upload() # Upload the file.
+        appCount += 1
 
 
 
