@@ -5,7 +5,7 @@
 # By Billy Schmitt
 # schmitt@neurotechcenter.org
 #
-# Last Updated: 12/29/16
+# Last Updated: 1/9/16
 #
 # Used to convert Qualtrics CSV response data to easy-to-review PDFs for each 
 # response. Assumes that the CSV files and other folders are located in the 
@@ -87,10 +87,10 @@ def main():
     os.mkdir("Statement of Interest")
     os.mkdir("CV or Resume")
     os.mkdir("(Unofficial) Transcript")
-    os.mkdir("Recommendation Letter #1")
-    os.mkdir("Recommendation Letter #2")
-    os.mkdir("Recommendation Letter #3")
-    os.mkdir("Recommendation Letter #4")
+    os.mkdir("Recommendation Letter 1")
+    os.mkdir("Recommendation Letter 2")
+    os.mkdir("Recommendation Letter 3")
+    os.mkdir("Recommendation Letter 4")
     os.chdir("..")
 
     # Make section template PDFs
@@ -98,10 +98,10 @@ def main():
     MakeSectionPdf("Statement of Interest")
     MakeSectionPdf("CV or Resume")
     MakeSectionPdf("(Unofficial) Transcript")
-    MakeSectionPdf("Recommendation Letter #1")
-    MakeSectionPdf("Recommendation Letter #2")
-    MakeSectionPdf("Recommendation Letter #3")
-    MakeSectionPdf("Recommendation Letter #4")
+    MakeSectionPdf("Recommendation Letter 1")
+    MakeSectionPdf("Recommendation Letter 2")
+    MakeSectionPdf("Recommendation Letter 3")
+    MakeSectionPdf("Recommendation Letter 4")
 
     # Make application PDFs
     print("Making PDFs...")
@@ -144,7 +144,7 @@ def main():
             if "Rec{}ID".format(num) in app.keys():
                 letter = GetPdf("Q1/{}*.pdf".format(app["Rec{}ID".format(num)]))
                 if letter:
-                    docs["Recommendation Letter #" + str(i)] = letter
+                    docs["Recommendation Letter " + str(i)] = letter
                     letterExists[num] = True
 
         # Dictionary of Existence
@@ -196,22 +196,10 @@ def main():
     os.remove("Statement of Interest.pdf")
     os.remove("CV or Resume.pdf")
     os.remove("(Unofficial) Transcript.pdf")
-    os.remove("Recommendation Letter #1.pdf")
-    os.remove("Recommendation Letter #2.pdf")
-    os.remove("Recommendation Letter #3.pdf")
-    os.remove("Recommendation Letter #4.pdf")
-
-    # print("Creating Compiled Statements of Interest PDF")
-
-    # # Create a merger to merge all the PDFs
-    # compiledSois = PdfFileMerger()
-
-    # # Get file path of all applicant PDFs
-    # appPdfs = glob("2017_Applications/*")
-
-    # # For each one, add to compiledSois
-    # for pdfPath in appPdfs:
-    #     pdf = open(pdfPath, "rb")
+    os.remove("Recommendation Letter 1.pdf")
+    os.remove("Recommendation Letter 2.pdf")
+    os.remove("Recommendation Letter 3.pdf")
+    os.remove("Recommendation Letter 4.pdf")
 
 
 
