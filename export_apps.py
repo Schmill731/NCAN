@@ -21,6 +21,7 @@
 import os
 import shutil
 import collections
+import csv
 from glob import glob
 from export_support import *
 from pdf_templates import *
@@ -32,7 +33,7 @@ from pydrive.drive import GoogleDrive
 
 # Global variables
 year = "2017"
-GDriveDestID = "0B67b4FFl6pYlY1dCc3hXTkJpdlk"
+GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
 
 # High-level Walkthrough of script
 def main():
@@ -165,7 +166,7 @@ def main():
                 appPdf.addPage(page)
 
         # Write PDF
-        appStream = open("../{}_Applications/{}.pdf".format(year, 
+        appStream = open("../{}_Applications/{}_{}.pdf".format(year, app["Last"] 
             app["AppID"]), "wb")
         appPdf.write(appStream)
 
@@ -175,7 +176,7 @@ def main():
     print("\n--------Post-Processing PDFs--------")
 
     # Delete temporary files
-    print("Deleting Temporary Files")
+    print("Deleting Temporary Files...")
     filesToDelete = ["SOI", "cover", "WIP", "Header"]
     for ext in filesToDelete:
         for file in glob("*_{}.pdf".format(ext)):
@@ -189,6 +190,18 @@ def main():
     os.remove("Recommendation Letter #2.pdf")
     os.remove("Recommendation Letter #3.pdf")
     os.remove("Recommendation Letter #4.pdf")
+
+    # Create applicant CSV file
+    print("Creating Applicant CSV File...")
+    appCsv = open("../{}_Applications/{} Applicants.csv", "w")
+    csvHeader = ["AppID", "First", "Last", "Email"]
+    writer = csv.DictWriter(appCsv, fieldnames=csvHeader, restval="ERROR", 
+        extrasaction="ignore")
+    writer.writeheader()
+    for app in apps:
+        writer.writerow(app)
+
+
 
     print("\n--------Uploading files to Google Drive--------")
 
@@ -214,7 +227,7 @@ def main():
         print("Uploading {} of {}...".format(appCount, len(apps)))
         file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", 
             "id": "{}".format(GDriveDestID)}], 
-            "title":"{}.pdf".format(app["AppID"])})
+            "title":"{}: {}.pdf".format(app["Last"], app["AppID"])})
 
         # Read file and set it as a content of this instance.
         file.SetContentFile("../{}_Applications/{}.pdf".format(year,
