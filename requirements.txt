@@ -1,0 +1,4 @@
+-e git+https://github.com/googledrive/PyDrive.git#egg=PyDrive
+PyPDF2
+reportlab
+glob

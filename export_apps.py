@@ -74,7 +74,7 @@ def main():
                 app.update(dem)
 
     # Create and/or clean up workspace for files
-    print("Creating folders for applications...")
+    print("Creating folder for applications...")
     appFolder = "../{}_Applications".format(year)
     if not os.path.exists(appFolder):
         # Create workspace (e.g. folder to hold applications)
@@ -97,10 +97,10 @@ def main():
         MakeSectionPdf(template)
 
     # Make application PDFs
-    print("Making PDFs...")
+    print("\n--------Making PDFs--------")
     appCount = 1
     for app in apps:
-        print("\n--------Starting Application {} of {}--------".format(appCount,
+        print("Starting Application {} of {}...".format(appCount,
             len(apps)))
         print("Applicant ID: {}".format(app["AppID"]))
 

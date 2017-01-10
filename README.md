@@ -49,11 +49,13 @@
 
 ## Step 2: Run the Script
 
-* Move the NCAN_scripts folder to your downloads folder
-* Open a terminal window and navigate to the NCAN folder
+* Move the NCAN_scripts folder (and unzip it, if necessary) to your downloads folder
+* Open a terminal window and navigate to the NCAN_scripts folder (likely `cd C:/users/your_username/downloads/NCAN_scripts`).
+* If this is your first time running the script on this computer, ensure you have python 3 installed and run: `pip3 install --user -r requirements.txt`
 * If necessary, open `export_apps.py` and update the `year` and `GDriveDestID` global variables as necessary.
+	* You can obtain the ID for the folder you wish to place the applicant PDFs by going to the folder on your Google Drive account and looking at the URL for that folder: `https://drive.google.com/drive/u/1/folders/the_id_is_here`
 * type: `./export_apps.py`
-* Allow the Google Drive Authentication that will pop (needed in order to upload the files to Google Drive).
+* Allow the Google Drive Authentication that will pop up (needed in order to upload the files to Google Drive).
 
 ## Step 3: Check Google Drive
 
