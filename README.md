@@ -1,5 +1,9 @@
 # NCAN Summer Course Qualtrics Application Export Script Instructions
 
+## Description
+
+These instructions describe how to render the NCAN Summer Course applications into easy-to-read PDFs. A copy of the NCAN scripts folder, which includes this readme, is accessible on GitHub at: `https://github.com/Schmill731/NCAN`. This GitHub will always contain the newest version of this script (and others for the summer course). Please note that it does not contain the requisite `client_secrets.json` file as this contains sensitive data. Please contact Billy Schmitt if you require this file.
+
 ## Step 1: Download Qualtrics CSV and Files
 
 * Log-in to Qualtrics
