@@ -32,7 +32,7 @@ from pydrive.drive import GoogleDrive
 
 # Global variables
 year = "2017"
-GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
+GDriveDestID = "0B67b4FFl6pYlY1dCc3hXTkJpdlk"
 
 # High-level Walkthrough of script
 def main():
@@ -102,19 +102,16 @@ def main():
     for app in apps:
         print("Starting Application {} of {}...".format(appCount,
             len(apps)))
-        print("Applicant ID: {}".format(app["AppID"]))
 
         #Create dictionary to hold PDF pages
         docs = collections.OrderedDict()
 
         # Make SOI first (basic info last, to check if all parts submitted)
-        print("Making Statement of Interest...")
         MakeSoiPdf(app)
         soi = GetPdf("{}_SOI.pdf".format(app["AppID"]))
         docs["Statement of Interest"] = soi
 
         # Get CV
-        print("Getting CV...")
         cvExists = False
         cv = GetPdf("../Summer_Course_{}_Application/Q12/{}*.pdf".format(year,
             app["AppID"]))
@@ -123,7 +120,6 @@ def main():
             cvExists = True
 
         # Get transcript
-        print("Getting Transcript...")
         transcriptExists = False
         transcript = GetPdf("../Summer_Course_{}_Application/Q11/{}*.pdf".format(year,
             app["AppID"]))
@@ -132,7 +128,6 @@ def main():
             transcriptExists = True
 
         # Get recommendation letters and add it to WIP PDF
-        print("Getting Letters of Recommendation...")
         letterExists = [None]
         for num in range(1, 5):
             letterExists.append(False)
@@ -147,14 +142,12 @@ def main():
             "Letters": letterExists}
 
         # Make Cover Page
-        print("Making Cover Page...")
         completed = MakeCoverPage(app, fileExists)
 
         # Get Cover Page
         cover = GetPdf("{}_cover.pdf".format(app["AppID"]))
 
         # Add pages to PDF (with header and watermark, if appropriate)
-        print("Building Application PDF...")
         appPdf = PdfFileWriter()
         pages = AddHeader(cover.pages, app)
         pages = AddSection(pages, "Cover Page")
