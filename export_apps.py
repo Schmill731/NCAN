@@ -194,7 +194,7 @@ def main():
     # Create applicant CSV file
     print("Creating Applicant CSV File...")
     with open("../{}_Applications/{} Applicants.csv".format(year, year), "w") as appCsv:
-        csvHeader = ["AppID", "First", "Last", "Email"]
+        csvHeader = ["AppID", "First", "Last", "Email", "Gender", "Hispanic", "Race", "Education"]
         writer = csv.DictWriter(appCsv, fieldnames=csvHeader, restval="ERROR", 
             extrasaction="ignore")
         writer.writeheader()
@@ -355,6 +355,7 @@ def MakeCoverPage(app, fileExists):
             hispanic = "No answer"
         text.append(Paragraph("<b>Are you Hispanic or Latino?</b> {}".format(hispanic),
             styles["normal"]))
+        app["Hispanic"] = hispanic
 
         #Race/Ethnicity
         race = ""
@@ -379,6 +380,7 @@ def MakeCoverPage(app, fileExists):
             race = "No answer"
         text.append(Paragraph("<b>Race or Ethnicity:</b> {}".format(race),
             styles["normal"]))
+        app["Race"] = race
 
         # Gender
         gender = ""
@@ -390,6 +392,7 @@ def MakeCoverPage(app, fileExists):
             gender = "No answer"
         text.append(Paragraph("<b>Gender:</b> {}".format(gender),
             styles["normal"]))
+        app["Gender"] = gender
 
         #Education
         ed = ""
@@ -411,6 +414,7 @@ def MakeCoverPage(app, fileExists):
             ed = "No answer"
         text.append(Paragraph("<b>Education:</b> {}".format(ed),
             styles["normal"]))
+        app["Education"] = ed
 
     # Counter to track number of recommendations submitted
     recsSubmitted = 0
