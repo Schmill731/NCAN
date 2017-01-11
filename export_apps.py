@@ -166,7 +166,7 @@ def main():
                 appPdf.addPage(page)
 
         # Write PDF
-        appStream = open("../{}_Applications/{}_{}.pdf".format(year, app["Last"] 
+        appStream = open("../{}_Applications/{}_{}.pdf".format(year, app["Last"], 
             app["AppID"]), "wb")
         appPdf.write(appStream)
 
@@ -193,13 +193,13 @@ def main():
 
     # Create applicant CSV file
     print("Creating Applicant CSV File...")
-    appCsv = open("../{}_Applications/{} Applicants.csv", "w")
-    csvHeader = ["AppID", "First", "Last", "Email"]
-    writer = csv.DictWriter(appCsv, fieldnames=csvHeader, restval="ERROR", 
-        extrasaction="ignore")
-    writer.writeheader()
-    for app in apps:
-        writer.writerow(app)
+    with open("../{}_Applications/{} Applicants.csv".format(year, year), "w") as appCsv:
+        csvHeader = ["AppID", "First", "Last", "Email"]
+        writer = csv.DictWriter(appCsv, fieldnames=csvHeader, restval="ERROR", 
+            extrasaction="ignore")
+        writer.writeheader()
+        for app in apps:
+            writer.writerow(app)
 
 
 
@@ -217,7 +217,7 @@ def main():
     # Delete all old application files
     file_list = drive.ListFile({'q': "'{}' in parents and trashed=false".format(GDriveDestID)}).GetList()
     for file in file_list:
-        if "R_" in file["title"] and ".pdf" in file["title"]:
+        if ("R_" in file["title"] and ".pdf" in file["title"]) or ".csv" in file["title"]:
             file.Delete()
 
     # Upload files to Google Drive
@@ -230,10 +230,16 @@ def main():
             "title":"{}: {}.pdf".format(app["Last"], app["AppID"])})
 
         # Read file and set it as a content of this instance.
-        file.SetContentFile("../{}_Applications/{}.pdf".format(year,
-            app["AppID"]))
+        file.SetContentFile("../{}_Applications/{}_{}.pdf".format(year,
+            app["Last"], app["AppID"]))
         file.Upload() # Upload the file.
         appCount += 1
+
+    file = drive.CreateFile({"parents": [{"kind": "drive#fileLink", 
+        "id": "{}".format(GDriveDestID)}], 
+        "title":"{} Applicants.csv".format(year)})
+    file.SetContentFile("../{}_Applications/{} Applicants.csv".format(year, year))
+    file.Upload()
 
 
 
