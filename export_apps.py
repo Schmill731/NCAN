@@ -56,17 +56,16 @@ def main():
 
     # Join recommendation data with application data
     for app in apps:
+        # Save number of recommenders
+        recCount = 0
         for rec in recs:
-            # Save number of recommenders
-            recCount = 0
-
             # Link recommenders with applications
             for num in range(1, 5):
-                if "Rec{}Email".format(num) in app.keys():
-                    if app["Rec{}Email".format(num)] == rec["Email"]:
+                if app["Rec{}Email".format(num)] is not "":
+                    if app["Email".format(num)] == rec["AppEmail"] and app["Rec{}Email".format(num)] == rec["Email"]:
                         app["Rec{}ID".format(num)] = rec["recID"]
                         recCount += 1
-            app["RecCount"] = recCount
+        app["RecCount"] = recCount
 
     # Join demographic info with applications
     for dem in dems:
