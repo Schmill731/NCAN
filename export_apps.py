@@ -36,9 +36,10 @@ from email.message import EmailMessage
 from email.headerregistry import Address
 from email.utils import make_msgid
 from itertools import groupby
+from getpass import getpass
 
 # Global variables
-password = input("Gmail Password: ")
+password = getpass("Gmail Password: ")
 year = "2017"
 GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
 appReviewers = {"Billy Schmitt": "billysch@nycap.rr.com", "Jonathan Carp": "williamschmitt@college.harvard.edu"}
