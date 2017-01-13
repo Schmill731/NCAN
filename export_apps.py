@@ -22,6 +22,8 @@ import os
 import shutil
 import collections
 import csv
+import smtplib
+import random
 from glob import glob
 from export_support import *
 from pdf_templates import *
@@ -30,10 +32,15 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak
 from PyPDF2 import PdfFileWriter, PdfFileReader
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from email.message import EmailMessage
+from email.headerregistry import Address
+from email.utils import make_msgid
+from itertools import groupby
 
 # Global variables
 year = "2017"
 GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
+appReviewers = {"Billy Schmitt": "billysch@nycap.rr.com", "Jonathan Carp": "williamschmitt@college.harvard.edu"}
 
 # High-level Walkthrough of script
 def main():
@@ -239,6 +246,139 @@ def main():
         "title":"{} Applicants.csv".format(year)})
     file.SetContentFile("../{}_Applications/{} Applicants.csv".format(year, year))
     file.Upload()
+
+    print("\n--------Distributing Applications--------")
+
+    print("Getting application links...")
+    app_list = drive.ListFile({'q': "'{}' in parents and trashed=false".format(GDriveDestID)}).GetList()
+    appPdfs = []
+    for file in app_list:
+        if "R_" in file["title"] and ".pdf" in file["title"]:
+            appPdfs.append(file)
+
+    print("Emailing applications...")
+    # Divide up applications
+    numApps = len(appPdfs)
+    numReviewers = len(appReviewers)
+    reviewBurden = (numApps * 2) // numReviewers
+
+    # Generate list to sample from
+    appsToReview = appPdfs + appPdfs
+    random.shuffle(appsToReview)
+
+    # Make list of reviewers
+    reviewers = []
+    for reviewer, email in appReviewers.items():
+        reviewers.append({"Name": reviewer, "Email": email, "Apps": []})
+
+    # Distribute applications
+    while appsToReview:
+        for reviewer in reviewers:
+            if appsToReview:
+                selection = random.choice(appsToReview)
+                if selection in reviewer["Apps"]:
+                    selection = random.choice(appsToReview)
+                else:
+                    reviewer["Apps"].append(selection)
+                    appsToReview.remove(selection)
+
+    #Create string of application links
+    for reviewer in reviewers:
+        reviewer["AppLinks"] = ""
+        reviewer["HtmlLinks"] = ""
+        for app in reviewer["Apps"]:
+            reviewer["AppLinks"] += "{}: {}\n\t\t\t".format(app["title"], 
+                app["webContentLink"])
+            reviewer["HtmlLinks"] += '<p><a href="{}">{}</a></p>'.format(app["webContentLink"], 
+                app["title"])
+
+
+    # Create the base text message.
+    for reviewer in reviewers:
+        msg = EmailMessage()
+        msg['Subject'] = "{} NCAN Summer Course Application Evaluations".format(year)
+        msg['From'] = Address("William Schmitt", addr_spec="schmitt@neurotechcenter.org")
+        msg['To'] = Address(reviewer["Name"], addr_spec=reviewer["Email"])
+        msg.set_content("""\
+            Dear {},
+
+            The application window for the {} NCAN Summer Course is now closed!
+            As such, it is now time for you to begin reviewing applictions to 
+            determine who should be admitted to the Course. There were {} 
+            applications this year, so we need you to review {} applications. In
+            an attempt to streamline this process, we have created an evaluation
+            form that you can quickly and easily fill out for each application.
+            This form is located here (https://goo.gl/forms/AHxAvtZDglX54DWd2).
+            NOTE that this form and all links below require the use of your 
+            @neurotechcenter.org account. Please make sure you are logged into
+            your account.
+
+            The applications you have been assigned are:
+            {}
+
+            The links above should automatically download each application to
+            your computer for easy viewing, but in case they do not work, you
+            should be able to access all applications here
+            (https://drive.google.com/drive/folders/0B67b4FFl6pYlVnY2cVpFbjlGdmM?usp=sharing).
+
+            Thank you for the anticipated time and attention you will spend reviewing
+            these applications. If you have any questions about the process, please
+            feel free to contact Billy or Dr. Carp.
+
+            Thank you,
+            The NCAN Summer Course Bot""".format(reviewer["Name"],
+                year, numApps, reviewBurden, reviewer["AppLinks"]))
+
+        # Add the html version.  This converts the message into a multipart/alternative
+        # container, with the original text message as the first part and the new html
+        # message as the second part.
+        msg.add_alternative("""\
+        <html>
+          <head></head>
+          <body>
+            <p>Dear {},</p>
+            <p>
+                The application window for the {} NCAN Summer Course is now 
+                closed! As such, it is now time for you to begin reviewing applictions 
+                to determine who should be admitted to the Course. There were {} 
+                applications this year, so we need you to review {} applications. 
+                In an attempt to streamline this process, we have created an 
+                evaluation form that you can quickly and easily fill out for each 
+                application. This form is located 
+                <a href="https://goo.gl/forms/PftRKWtL6SnG1Ozp1">here</a>. 
+                NOTE: this form requires the use of your @neurotechcenter.org account. 
+                Please make sure you are logged into your account.
+            </p>
+            <p>The applications you have been assigned are:</p>
+            {}
+            <p>
+                The links above should automatically download each application to 
+                your computer for easy viewing, but in case they do not work, you 
+                should be able to access all applications 
+                <a href="https://drive.google.com/drive/folders/0B67b4FFl6pYlVnY2cVpFbjlGdmM?usp=sharing">here</a>.
+            </p>
+            <p>
+            Thank you for the anticipated time and attention you will spend 
+            reviewing these applications. If you have any questions about the 
+            process, please feel free to contact Billy or Dr. Carp.</p>
+            <p>Thank you,</p>
+            <p>The NCAN Summer Course Bot</p>
+          </body>
+        </html>
+        """.format(reviewer["Name"], year, numApps, reviewBurden, reviewer["HtmlLinks"]), subtype='html')
+
+        # Send the message via local SMTP server.
+        with smtplib.SMTP('smtp.gmail.com',587) as server: #port 465 or 587
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login('schmitt@neurotechcenter.org','BC!nc@n2016')
+            server.send_message(msg)
+            server.close()
+
+
+
+
 
 
 
