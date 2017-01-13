@@ -38,6 +38,7 @@ from email.utils import make_msgid
 from itertools import groupby
 
 # Global variables
+password = input("Gmail Password: ")
 year = "2017"
 GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
 appReviewers = {"Billy Schmitt": "billysch@nycap.rr.com", "Jonathan Carp": "williamschmitt@college.harvard.edu"}
@@ -372,7 +373,7 @@ def main():
             server.ehlo()
             server.starttls()
             server.ehlo()
-            server.login('schmitt@neurotechcenter.org','BC!nc@n2016')
+            server.login('schmitt@neurotechcenter.org', password)
             server.send_message(msg)
             server.close()
 
