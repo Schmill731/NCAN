@@ -42,7 +42,7 @@ from getpass import getpass
 password = getpass("Gmail Password: ")
 year = "2017"
 GDriveDestID = "0B67b4FFl6pYlVnY2cVpFbjlGdmM"
-appReviewers = {"Billy Schmitt": "billysch@nycap.rr.com", "Jonathan Carp": "williamschmitt@college.harvard.edu"}
+appReviewers = {"Mr. Schmitt": "billysch@nycap.rr.com", "Dr. Carp": "carp@neurotechcenter.org"}
 
 # High-level Walkthrough of script
 def main():
@@ -258,7 +258,7 @@ def main():
         if "R_" in file["title"] and ".pdf" in file["title"]:
             appPdfs.append(file)
 
-    print("Emailing applications...")
+    print("Apportioning applications...")
     # Divide up applications
     numApps = len(appPdfs)
     numReviewers = len(appReviewers)
@@ -284,15 +284,16 @@ def main():
                     reviewer["Apps"].append(selection)
                     appsToReview.remove(selection)
 
+    print("Emailing applications...")
     #Create string of application links
     for reviewer in reviewers:
         reviewer["AppLinks"] = ""
         reviewer["HtmlLinks"] = ""
         for app in reviewer["Apps"]:
-            reviewer["AppLinks"] += "{}: {}\n\t\t\t".format(app["title"], 
+            reviewer["AppLinks"] += "{}: {}\n\t\t\t".format(app["title"].replace(".pdf", ""), 
                 app["webContentLink"])
             reviewer["HtmlLinks"] += '<p><a href="{}">{}</a></p>'.format(app["webContentLink"], 
-                app["title"])
+                app["title"].replace(".pdf", ""))
 
 
     # Create the base text message.
@@ -311,11 +312,13 @@ def main():
             an attempt to streamline this process, we have created an evaluation
             form that you can quickly and easily fill out for each application.
             This form is located here (https://goo.gl/forms/AHxAvtZDglX54DWd2).
-            NOTE that this form and all links below require the use of your 
+            NOTE: this form and all links below require the use of your 
             @neurotechcenter.org account. Please make sure you are logged into
-            your account.
+            your account (if you are not, you will be prompted to do so when 
+            you click on the link).
 
-            The applications you have been assigned are:
+            The applications you have been assigned are: 
+            (listed as lastName: Applicant ID)
             {}
 
             The links above should automatically download each application to
@@ -348,10 +351,13 @@ def main():
                 evaluation form that you can quickly and easily fill out for each 
                 application. This form is located 
                 <a href="https://goo.gl/forms/PftRKWtL6SnG1Ozp1">here</a>. 
-                NOTE: this form requires the use of your @neurotechcenter.org account. 
-                Please make sure you are logged into your account.
+                NOTE: this form and all links below require the use of your 
+                @neurotechcenter.org account. Please make sure you are logged 
+                into your account (if you are not, you will be prompted to do so
+                when you click on the link).
             </p>
             <p>The applications you have been assigned are:</p>
+            (listed as lastName: Applicant ID)
             {}
             <p>
                 The links above should automatically download each application to 
