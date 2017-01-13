@@ -380,7 +380,7 @@ def main():
             server.ehlo()
             server.starttls()
             server.ehlo()
-            server.login('schmitt@neurotechcenter.org', password)
+            server.login('summercourse@neurotechcenter.org', password)
             server.send_message(msg)
             server.close()
 
